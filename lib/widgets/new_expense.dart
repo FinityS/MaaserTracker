@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 final formatter = DateFormat.yMd();
 
 class NewExpense extends StatefulWidget {
-  const NewExpense({Key? key}) : super(key: key);
+  const NewExpense({Key? key , required this.onAddExpense}) : super(key: key);
+
+
+  final void Function(expense.Expense expense) onAddExpense;
 
   @override
   State<NewExpense> createState() => _NewExpenseState();
@@ -36,8 +39,13 @@ class _NewExpenseState extends State<NewExpense> {
     final amountIsValid = enteredAmount != null && enteredAmount > 0;
     if(_titleController.text.trim().isEmpty || !amountIsValid ||
         _selectedDate == null || _selectedCategory == null) {
+      // Show error
       return;
     }
+
+    widget.onAddExpense(expense.Expense(title: _titleController.text.trim(), amount: enteredAmount, date: _selectedDate!, category: _selectedCategory!));
+
+
 
 }
 
