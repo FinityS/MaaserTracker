@@ -43,10 +43,13 @@ class _NewExpenseState extends State<NewExpense> {
       return;
     }
 
-    widget.onAddExpense(expense.Expense(title: _titleController.text.trim(), amount: enteredAmount, date: _selectedDate!, category: _selectedCategory!));
+    widget.onAddExpense(expense.Expense(
+        title: _titleController.text.trim(),
+        amount: enteredAmount,
+        date: _selectedDate!,
+        category: _selectedCategory!));
 
-
-
+    Navigator.of(context).pop();
 }
 
   @override
@@ -59,7 +62,7 @@ class _NewExpenseState extends State<NewExpense> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(padding: EdgeInsets.all(16),
+    return Padding(padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       child: Column(
         children: [
           TextField(

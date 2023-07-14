@@ -59,3 +59,28 @@ class Expense {
   }
 
 }
+
+class ExpenseBucket {
+  final Category category;
+  final List<Expense> expenses;
+
+  ExpenseBucket({
+    required this.category,
+    required this.expenses,
+  });
+
+  ExpenseBucket.forCategory(List<Expense> allExpenses, this.category)
+    : expenses = allExpenses.where((expense) => expense.category == category).toList();
+
+  double get totalAmount {
+    double sum = 0;
+    for (var expense in expenses) {
+      sum += expense.amount;
+    }
+    return sum;
+  }
+
+  String get formattedTotalAmount {
+    return '\$${totalAmount.toStringAsFixed(2)}';
+  }
+}

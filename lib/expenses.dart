@@ -1,9 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:maaser_tracker/widgets/expenses_list.dart';
 import 'package:maaser_tracker/models/Expense.dart';
 import 'package:maaser_tracker/widgets/new_expense.dart';
-
 
 class Expenses extends StatefulWidget {
   const Expenses({Key? key}) : super(key: key);
@@ -11,7 +9,6 @@ class Expenses extends StatefulWidget {
   @override
   State<Expenses> createState() => _ExpensesState();
 }
-
 
 class _ExpensesState extends State<Expenses> {
   final List<Expense> _registeredExpenses = [
@@ -37,8 +34,9 @@ class _ExpensesState extends State<Expenses> {
 
   void _openAddExpenseOverlay() {
     showModalBottomSheet(
-      context: context,
-      builder: (ctx) => NewExpense(onAddExpense: _addExpense));
+        isScrollControlled: true,
+        context: context,
+        builder: (ctx) => NewExpense(onAddExpense: _addExpense));
   }
 
   void _addExpense(Expense expense) {
@@ -47,8 +45,35 @@ class _ExpensesState extends State<Expenses> {
     });
   }
 
+  void _removeExpense(Expense expense) {
+    final expenseIndex = _registeredExpenses.indexOf(expense);
+    setState(() {
+      _registeredExpenses.remove(expense);
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Expense removed!'),
+      duration: const Duration(seconds: 2),
+      action: SnackBarAction(
+        label: 'UNDO',
+        onPressed: () {
+          setState(() {
+            _registeredExpenses.insert(expenseIndex,expense);
+          });
+        },
+      )
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
+    Widget mainContent = const Center(child: Text('No expenses yet!'));
+
+    if (_registeredExpenses.isNotEmpty) {
+      mainContent = ExpensesList(
+          expenses: _registeredExpenses, onRemoveExpense: _removeExpense);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expenses'),
@@ -61,8 +86,9 @@ class _ExpensesState extends State<Expenses> {
       ),
       body: Column(
         children: [
-          Expanded(child: ExpensesList(expenses: _registeredExpenses)),
+          Expanded(child: mainContent),
         ],
-      ),);
+      ),
+    );
   }
 }
