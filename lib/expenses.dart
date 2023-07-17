@@ -34,6 +34,7 @@ class _ExpensesState extends State<Expenses> {
 
   void _openAddExpenseOverlay() {
     showModalBottomSheet(
+Z        useSafeArea: true,
         isScrollControlled: true,
         context: context,
         builder: (ctx) => NewExpense(onAddExpense: _addExpense));
@@ -52,17 +53,16 @@ class _ExpensesState extends State<Expenses> {
     });
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Expense removed!'),
-      duration: const Duration(seconds: 2),
-      action: SnackBarAction(
-        label: 'UNDO',
-        onPressed: () {
-          setState(() {
-            _registeredExpenses.insert(expenseIndex,expense);
-          });
-        },
-      )
-    ));
+        content: const Text('Expense removed!'),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () {
+            setState(() {
+              _registeredExpenses.insert(expenseIndex, expense);
+            });
+          },
+        )));
   }
 
   @override
