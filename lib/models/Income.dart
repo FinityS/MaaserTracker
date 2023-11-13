@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 final formatter = DateFormat.yMd();
 const uuid = Uuid();
 
 class Income {
-
   final String id;
   final String title;
   final double amount;
@@ -24,6 +23,4 @@ class Income {
   String get formattedDate {
     return formatter.format(date);
   }
-
 }
-

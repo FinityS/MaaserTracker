@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:maaser_tracker/models/Expense.dart' as expense;
 import 'package:intl/intl.dart';
+import 'package:maaser_tracker/models/Expense.dart' as expense;
 
 final formatter = DateFormat.yMd();
 
 class NewExpense extends StatefulWidget {
-  const NewExpense({Key? key , required this.onAddExpense}) : super(key: key);
-
+  const NewExpense({Key? key, required this.onAddExpense}) : super(key: key);
 
   final void Function(expense.Expense expense) onAddExpense;
 
@@ -15,7 +14,6 @@ class NewExpense extends StatefulWidget {
 }
 
 class _NewExpenseState extends State<NewExpense> {
-
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   DateTime? _selectedDate;
@@ -36,8 +34,10 @@ class _NewExpenseState extends State<NewExpense> {
   void _submitExpenseData() {
     final enteredAmount = double.tryParse(_amountController.text);
     final amountIsValid = enteredAmount != null && enteredAmount > 0;
-    if(_titleController.text.trim().isEmpty || !amountIsValid ||
-        _selectedDate == null || _selectedCategory == null) {
+    if (_titleController.text.trim().isEmpty ||
+        !amountIsValid ||
+        _selectedDate == null ||
+        _selectedCategory == null) {
       // Show error
       return;
     }
@@ -49,7 +49,7 @@ class _NewExpenseState extends State<NewExpense> {
         category: _selectedCategory!));
 
     Navigator.of(context).pop();
-}
+  }
 
   @override
   void dispose() {
@@ -58,10 +58,10 @@ class _NewExpenseState extends State<NewExpense> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
-    return Padding(padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       child: Column(
         children: [
           TextField(
@@ -74,7 +74,8 @@ class _NewExpenseState extends State<NewExpense> {
                 child: TextField(
                   decoration: const InputDecoration(
                     labelText: 'Amount',
-                    prefixText: '\$',),
+                    prefixText: '\$',
+                  ),
                   keyboardType: TextInputType.number,
                   controller: _amountController,
                 ),
@@ -82,48 +83,48 @@ class _NewExpenseState extends State<NewExpense> {
               const SizedBox(width: 16),
               Expanded(
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text( _selectedDate !=null ? formatter.format(_selectedDate!) : 'No Date Chosen'),
-                    IconButton(
-                        onPressed: _presentDatePicker,
-                        icon: const Icon(Icons.calendar_month)),
-                  ]
-                ),
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(_selectedDate != null
+                          ? formatter.format(_selectedDate!)
+                          : 'No Date Chosen'),
+                      IconButton(
+                          onPressed: _presentDatePicker,
+                          icon: const Icon(Icons.calendar_month)),
+                    ]),
               ),
             ],
           ),
-
           const TextField(
             decoration: InputDecoration(labelText: 'Category'),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              DropdownButton(
+          Row(children: [
+            DropdownButton(
                 value: _selectedCategory,
-                items: expense.Category.values.map((category) =>
-                DropdownMenuItem(
-                                value: category,
-                                child: Text(category.name))).toList(),
-                                onChanged: (value) {
-                setState(() {
-                  if (value is expense.Category) {
-                    _selectedCategory = value;
-                  }
-                });
-    }),
-              ElevatedButton(onPressed: () {
-                Navigator.of(context).pop();
-              }, child: const Text('Cancel')),
-              ElevatedButton(onPressed: _submitExpenseData, child: const Text('Add Expense')),
-            ]
-          )
-
+                items: expense.Category.values
+                    .map((category) => DropdownMenuItem(
+                        value: category, child: Text(category.name)))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    if (value is expense.Category) {
+                      _selectedCategory = value;
+                    }
+                  });
+                }),
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: _submitExpenseData,
+                child: const Text('Add Expense')),
+          ])
         ],
       ),
-    );}
-
+    );
+  }
 }
-

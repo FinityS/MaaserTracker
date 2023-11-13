@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 final formatter = DateFormat.yMd();
 const uuid = Uuid();
@@ -47,7 +47,6 @@ int minutesInDay(DateTime date) {
 }
 
 class Expense {
-
   final String id;
   final String title;
   final double amount;
@@ -64,7 +63,6 @@ class Expense {
   String get formattedDate {
     return formatter.format(date);
   }
-
 }
 
 class ExpenseBucket {
@@ -77,7 +75,9 @@ class ExpenseBucket {
   });
 
   ExpenseBucket.forCategory(List<Expense> allExpenses, this.category)
-    : expenses = allExpenses.where((expense) => expense.category == category).toList();
+      : expenses = allExpenses
+            .where((expense) => expense.category == category)
+            .toList();
 
   double get totalAmount {
     double sum = 0;

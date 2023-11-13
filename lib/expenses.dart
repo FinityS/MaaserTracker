@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:maaser_tracker/widgets/expenses_list.dart';
 import 'package:maaser_tracker/models/Expense.dart';
+import 'package:maaser_tracker/widgets/expenses_list.dart';
 import 'package:maaser_tracker/widgets/new_expense.dart';
 
 class Expenses extends StatefulWidget {
