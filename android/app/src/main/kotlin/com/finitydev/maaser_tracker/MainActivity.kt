@@ -1,4 +1,4 @@
-package com.example.maaser_tracker
+package com.finitydev.maaser_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 

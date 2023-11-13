@@ -1,6 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import  'package:maaser_tracker/models/Expense.dart' as expense;
+import 'package:maaser_tracker/models/Expense.dart' as expense;
 import 'package:intl/intl.dart';
 
 final formatter = DateFormat.yMd();
@@ -66,14 +65,14 @@ class _NewExpenseState extends State<NewExpense> {
       child: Column(
         children: [
           TextField(
-            decoration: InputDecoration(labelText: 'Title'),
+            decoration: const InputDecoration(labelText: 'Title'),
             controller: _titleController,
           ),
           Row(
             children: [
               Expanded(
                 child: TextField(
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Amount',
                     prefixText: '\$',),
                   keyboardType: TextInputType.number,
@@ -96,7 +95,7 @@ class _NewExpenseState extends State<NewExpense> {
             ],
           ),
 
-          TextField(
+          const TextField(
             decoration: InputDecoration(labelText: 'Category'),
           ),
           const SizedBox(height: 16),
@@ -117,8 +116,8 @@ class _NewExpenseState extends State<NewExpense> {
     }),
               ElevatedButton(onPressed: () {
                 Navigator.of(context).pop();
-              }, child: Text('Cancel')),
-              ElevatedButton(onPressed: _submitExpenseData, child: Text('Add Expense')),
+              }, child: const Text('Cancel')),
+              ElevatedButton(onPressed: _submitExpenseData, child: const Text('Add Expense')),
             ]
           )
 

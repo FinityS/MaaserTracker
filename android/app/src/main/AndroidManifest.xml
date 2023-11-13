@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.maaser_tracker">
+    package="com.finitydev.maaser_tracker">
    <application
         android:label="maaser_tracker"
         android:name="${applicationName}"

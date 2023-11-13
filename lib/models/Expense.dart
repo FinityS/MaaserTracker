@@ -20,6 +20,7 @@ enum Category {
   gifts,
   entertainment,
   other,
+  charity
 }
 
 const categoryIcons = {
@@ -37,7 +38,13 @@ const categoryIcons = {
   Category.gifts: Icons.card_giftcard,
   Category.entertainment: Icons.sports_esports,
   Category.other: Icons.more_horiz,
+  Category.charity: Icons.favorite,
 };
+
+// method to calculate minutes in a day
+int minutesInDay(DateTime date) {
+  return date.hour * 60 + date.minute;
+}
 
 class Expense {
 

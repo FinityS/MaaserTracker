@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   uuid: ^3.0.7
   intl: ^0.18.1
+  kosher_dart: ^2.0.16
+  change_app_package_name: ^1.1.0
 
 dev_dependencies:
   flutter_test:
