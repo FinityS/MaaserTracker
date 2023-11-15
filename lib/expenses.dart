@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:maaser_tracker/models/Expense.dart';
-import 'package:maaser_tracker/widgets/expenses_list.dart';
-import 'package:maaser_tracker/widgets/new_expense.dart';
+import 'package:maaserTracker/models/Expense.dart';
+import 'package:maaserTracker/widgets/expenses_list.dart';
+import 'package:maaserTracker/widgets/new_expense.dart';
 
 class Expenses extends StatefulWidget {
   const Expenses({Key? key}) : super(key: key);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:maaser_tracker/models/Expense.dart' as expense;
+import 'package:maaserTracker/models/Expense.dart' as expense;
 
 final formatter = DateFormat.yMd();
 

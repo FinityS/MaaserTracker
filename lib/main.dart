@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:maaser_tracker/expenses.dart';
+import 'package:maaserTracker/expenses.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
