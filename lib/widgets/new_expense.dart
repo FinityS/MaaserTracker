@@ -1,23 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:kosher_dart/kosher_dart.dart';
 import 'package:maaserTracker/models/Expense.dart' as expense;
+import '../models/Expense.dart';
+import '../models/transaction.dart';
 
 final formatter = DateFormat.yMd();
 
 class NewExpense extends StatefulWidget {
-  const NewExpense({Key? key, required this.onAddExpense}) : super(key: key);
+
+
+
+  const NewExpense({super.key, required this.onAddExpense, required this.transactionType });
 
   final void Function(expense.Expense expense) onAddExpense;
+  final Transaction transactionType;
 
   @override
   State<NewExpense> createState() => _NewExpenseState();
 }
 
 class _NewExpenseState extends State<NewExpense> {
+  late Transaction selectedTransaction;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedTransaction = widget.transactionType;
+  }
+
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   DateTime? _selectedDate;
-  expense.Category? _selectedCategory;
+  JewishDate? _selectedHebrewDate;
 
   void _presentDatePicker() async {
     final pickedDate = await showDatePicker(
@@ -28,6 +43,7 @@ class _NewExpenseState extends State<NewExpense> {
     );
     setState(() {
       _selectedDate = pickedDate;
+      _selectedHebrewDate = JewishDate.fromDateTime(pickedDate!);
     });
   }
 
@@ -36,8 +52,7 @@ class _NewExpenseState extends State<NewExpense> {
     final amountIsValid = enteredAmount != null && enteredAmount > 0;
     if (_titleController.text.trim().isEmpty ||
         !amountIsValid ||
-        _selectedDate == null ||
-        _selectedCategory == null) {
+        _selectedDate == null) {
       // Show error
       return;
     }
@@ -46,7 +61,9 @@ class _NewExpenseState extends State<NewExpense> {
         title: _titleController.text.trim(),
         amount: enteredAmount,
         date: _selectedDate!,
-        category: _selectedCategory!));
+        hebrewDate: _selectedHebrewDate!,
+        transactionType: selectedTransaction
+        ));
 
     Navigator.of(context).pop();
   }
@@ -64,8 +81,35 @@ class _NewExpenseState extends State<NewExpense> {
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       child: Column(
         children: [
+          SegmentedButton<Transaction>(
+            style: ButtonStyle(
+              foregroundColor: MaterialStateProperty.all(Colors.blue),
+              shadowColor: MaterialStateProperty.all(Colors.blue),
+              overlayColor: MaterialStateProperty.all(Colors.blue.withOpacity(0.2)),
+
+            ),
+            segments: const <ButtonSegment<Transaction>>[
+              ButtonSegment<Transaction>(
+                  label: Text('Income'),
+                  value: Transaction.income,
+                  icon: Icon(Icons.attach_money),
+              ),
+              ButtonSegment<Transaction>(
+                  label: Text('Maaser'),
+                  value: Transaction.maaser,
+                  icon: Icon(Icons.volunteer_activism)),
+            ],
+            selected: <Transaction>{selectedTransaction!},
+            onSelectionChanged: (Set<Transaction> newSelection) {
+              setState(() {
+                selectedTransaction = newSelection.first;
+              });
+            },
+          ),
           TextField(
-            decoration: const InputDecoration(labelText: 'Title'),
+            decoration: InputDecoration(
+              labelText: 'Title',
+            ),
             controller: _titleController,
           ),
           Row(
@@ -80,48 +124,38 @@ class _NewExpenseState extends State<NewExpense> {
                   controller: _amountController,
                 ),
               ),
-              const SizedBox(width: 16),
+
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
               Expanded(
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(_selectedDate != null
-                          ? formatter.format(_selectedDate!)
-                          : 'No Date Chosen'),
-                      IconButton(
-                          onPressed: _presentDatePicker,
-                          icon: const Icon(Icons.calendar_month)),
-                    ]),
+                child: Text(_selectedDate == null
+                    ? 'No date chosen!'
+                    : 'Picked Date: ${formatter.format(_selectedDate!)} ${_selectedHebrewDate!.toString()}'),
+              ),
+              TextButton(
+                onPressed: _presentDatePicker,
+                child: Icon(Icons.calendar_today),
               ),
             ],
           ),
-          const TextField(
-            decoration: InputDecoration(labelText: 'Category'),
-          ),
-          const SizedBox(height: 16),
           Row(children: [
-            DropdownButton(
-                value: _selectedCategory,
-                items: expense.Category.values
-                    .map((category) => DropdownMenuItem(
-                        value: category, child: Text(category.name)))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    if (value is expense.Category) {
-                      _selectedCategory = value;
-                    }
-                  });
-                }),
-            ElevatedButton(
+            Expanded(
+              child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('Cancel')),
-            ElevatedButton(
+                child: const Text('Cancel'),
+              ),
+            ),
+            Expanded(
+              child: ElevatedButton(
                 onPressed: _submitExpenseData,
-                child: const Text('Add Expense')),
+                child: const Text('Add'),
+              ),
+            ),
           ])
         ],
       ),

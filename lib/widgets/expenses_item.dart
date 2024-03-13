@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/Expense.dart';
 
 class ExpenseItem extends StatelessWidget {
-  const ExpenseItem({Key? key, required this.expense}) : super(key: key);
+  const ExpenseItem({super.key, required this.expense});
   final Expense expense;
 
   @override
@@ -21,9 +21,11 @@ class ExpenseItem extends StatelessWidget {
               const Spacer(),
               Row(
                 children: [
-                  Icon(categoryIcons[expense.category]),
+                  Icon(transactionIcons[expense.transactionType]),
                   const SizedBox(width: 8),
                   Text(expense.formattedDate),
+                  const SizedBox(width: 8),
+                  Text(expense.hebrewDate.toString()),
                 ],
               ),
             ],
