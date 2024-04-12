@@ -1,0 +1,9 @@
+package_rename_config:
+  android:
+    app_name: Maaser Tracker
+    package_name: com.finitydev.maaserTracker
+
+  ios:
+    app_name: Maaser Tracker
+    bundle_name: MaaserTracker
+    package_name: com.finitydev.maaserTracker

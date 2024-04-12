@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529888243134",
+    "project_id": "maaser-tracker",
+    "storage_bucket": "maaser-tracker.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529888243134:android:1450b6679afe154d1f5def",
+        "android_client_info": {
+          "package_name": "com.finitydev.maaserTracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSS5zUqq1MFQQCBJEwxWgiRJIsV-1Whmc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
