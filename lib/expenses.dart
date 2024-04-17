@@ -3,6 +3,7 @@ import 'package:kosher_dart/kosher_dart.dart';
 import 'package:maaserTracker/models/Expense.dart';
 import 'package:maaserTracker/widgets/expenses_list.dart';
 import 'package:maaserTracker/widgets/maaser_drawer.dart';
+import 'package:maaserTracker/widgets/month_item.dart';
 import 'package:maaserTracker/widgets/new_expense.dart';
 
 import 'models/transaction.dart';
@@ -97,60 +98,7 @@ class _ExpensesState extends State<Expenses> {
         onDestinationSelected: handleScreenChanged,
         selectedIndex: 0,
       ),
-      body: Center( child:  Card(
-        elevation: 4.0,
-        child: Container(
-          width: 200,
-          height: 200,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Text(
-                    'Jul 2023',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    '9%',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: 0.09,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Text(
-                    '\$550 / \$5000',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    '\$50 left to 10%',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      )) ,
+      body: Center( child:  MonthItem()) ,
     );
   }
 }
