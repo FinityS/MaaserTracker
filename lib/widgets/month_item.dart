@@ -1,16 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:kosher_dart/kosher_dart.dart';
 
-import '../models/Expense.dart';
+import '../models/month_totals.dart';
+import '../models/transaction_type.dart';
+
+
 
 class MonthItem extends StatelessWidget {
-  const MonthItem({super.key});
+  MonthItem({super.key});
+
+  // Example of a hardcoded MonthTotals object
+  final MonthTotals monthTotals = MonthTotals(
+    title: 'Jul 2023',
+    incomeAmount: 5000,
+    maaserAmount: 550,
+    date: DateTime.now(),
+    hebrewDate: JewishDate(),
+    transactionType: TransactionType.income,
+  );
+
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 4.0,
       child: Container(
-        width: 200,
+        width: 250,
         height: 150,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -19,7 +34,7 @@ class MonthItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text(
-                  'Jul 2023',
+                  monthTotals.title,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
@@ -32,13 +47,15 @@ class MonthItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text(
-                  '\$550 / \$5000',
+                  //String that represents maaserAmount / incomeAmount
+                  'Maaser: \$${monthTotals.maaserAmount.toStringAsFixed(0)} / \$${monthTotals.incomeAmount.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  '9%',
+                  //String that represents the percentage of maaserAmount out of incomeAmount
+                  '(${(monthTotals.maaserAmount / monthTotals.incomeAmount * 100).toStringAsFixed(0)}%)',
                   style: TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -56,7 +73,8 @@ class MonthItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text(
-                  '\$50 left to 10%',
+                  //String that represents amount of money left for maaserAmount to be 10% of incomeAmount
+                  '\$${(monthTotals.incomeAmount * 0.1 - monthTotals.maaserAmount).toStringAsFixed(0)} until 10%',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.red,

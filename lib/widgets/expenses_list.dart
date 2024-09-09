@@ -1,71 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:maaserTracker/widgets/expenses_item.dart';
+import 'package:provider/provider.dart';
 
-import '../models/Expense.dart';
-import '../models/transaction.dart';
+import '../models/transaction_type.dart';
+import '../providers/cash_flow_provider.dart';
 import 'maaser_drawer.dart';
 
 class ExpensesList extends StatelessWidget {
 
   const ExpensesList(
-      {super.key, required this.expenses, required this.onRemoveExpense, this.transactionType, required this.onAddExpense});
+      {super.key, this.transactionType});
 
-  final List<Expense> expenses;
-  final void Function(Expense expense) onRemoveExpense;
-  final Transaction? transactionType;
-  final void Function(Transaction transactionType) onAddExpense;
-
+  final TransactionType? transactionType;
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<CashFlowProvider>(
+      builder: (context, cashFlowProvider, child) {
+        final filteredExpenses = transactionType != null
+            ? cashFlowProvider.cashFlows
+            .where((expense) => expense.transactionType == transactionType)
+            .toList()
+            : cashFlowProvider.cashFlows;
 
-    // filter the expenses list based on the transaction type
-    final filteredExpenses = transactionType != null
-        ? expenses.where((expense) => expense.transactionType == transactionType).toList()
-        : expenses;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text( transactionType ==  Transaction.income ? 'Income' : "Maaser"),
-        actions: [
-          IconButton(
-            onPressed: () => onAddExpense(transactionType!),
-            icon: const Icon(Icons.add),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(// Title depends on the transactionType
+              transactionType == TransactionType.income
+                  ? 'Income'
+                  : transactionType == TransactionType.maaser
+                  ? 'Maaser'
+                  : 'Maaser Deductions',
+            ),
+            actions: [
+              IconButton(
+                onPressed: () => cashFlowProvider.openAddCashFlowOverlay(context, transactionType!),
+                icon: const Icon(Icons.add),
+              ),
+            ],
           ),
-        ],
-      ),
-      drawer: MaaserDrawer(
-        onDestinationSelected: (int selectedScreen) {
-          if (selectedScreen == 0) {
-            Navigator.of(context).pop();
-            Navigator.of(context).pop();
-          } else if ((selectedScreen == 1 && transactionType !=  Transaction.income)
-            || (selectedScreen == 2 && transactionType !=  Transaction.maaser)) {
-            Widget newScreen = ExpensesList(
-              expenses: expenses,
-              onRemoveExpense: onRemoveExpense,
-              transactionType: selectedScreen == 1 ? Transaction.income : Transaction.maaser,
-              onAddExpense: onAddExpense,
-            );
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => newScreen),
-            );
-          } else {
-            Navigator.of(context).pop();
-          }
-        },
-        selectedIndex: transactionType ==  Transaction.income ? 1 : 2,
-      ),
-      body: ListView.builder(
-        itemCount: filteredExpenses.length,
-        itemBuilder: (context, index) => Dismissible(
-            key: ValueKey(filteredExpenses[index]),
-            onDismissed: (direction) {
-              // Remove the item from the data source.
-              onRemoveExpense(filteredExpenses[index]);
-            },
-            child: ExpenseItem(expense: filteredExpenses[index])),
-      ),
+          drawer: MaaserDrawer(
+            selectedIndex: transactionType == TransactionType.income ? 1 : 2,
+          ),
+          body: ListView.builder(
+            itemCount: filteredExpenses.length,
+            itemBuilder: (context, index) => GestureDetector(
+              onTap: () => cashFlowProvider.openAddCashFlowOverlay(
+                  context, filteredExpenses[index].transactionType,
+                  cashFlow: filteredExpenses[index]),
+              child: ExpenseItem(expense: filteredExpenses[index]),
+            ),
+          ),
+        );
+      },
     );
 
   }

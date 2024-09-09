@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kosher_dart/kosher_dart.dart';
-import 'package:maaserTracker/models/transaction.dart';
+import 'package:maaserTracker/models/transaction_type.dart';
 import 'package:uuid/uuid.dart';
 
 final formatter = DateFormat.yMd();
 const uuid = Uuid();
 
-class MonthTotals {
+const transactionIcons = {
+  TransactionType.income: Icons.attach_money,
+  TransactionType.maaser: Icons.favorite,
+};
+
+class CashFlow {
   final String id;
   final String title;
   final double amount;
   final DateTime date;
   final JewishDate hebrewDate;
-  final Transaction transactionType;
+  final TransactionType transactionType;
 
-  MonthTotals({
+  CashFlow({
     required this.title,
     required this.amount,
     required this.date,
@@ -25,6 +30,16 @@ class MonthTotals {
 
   String get formattedDate {
     return formatter.format(date);
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'amount': amount,
+      'date': date.millisecondsSinceEpoch,
+      'transactionType': transactionType.index,
+    };
   }
 }
 

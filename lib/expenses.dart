@@ -1,86 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:kosher_dart/kosher_dart.dart';
-import 'package:maaserTracker/models/Expense.dart';
-import 'package:maaserTracker/widgets/expenses_list.dart';
+import 'package:maaserTracker/providers/cash_flow_provider.dart';
+import 'package:maaserTracker/widgets/bar_chart_item.dart';
 import 'package:maaserTracker/widgets/maaser_drawer.dart';
-import 'package:maaserTracker/widgets/month_item.dart';
-import 'package:maaserTracker/widgets/new_expense.dart';
+import 'package:provider/provider.dart';
 
-import 'models/transaction.dart';
+import 'models/transaction_type.dart';
 
-class Expenses extends StatefulWidget {
+class Expenses extends StatelessWidget {
   const Expenses({super.key});
-
-  @override
-  State<Expenses> createState() => _ExpensesState();
-}
-
-class _ExpensesState extends State<Expenses> {
-  final List<Expense> _registeredExpenses = [
-    Expense(
-      title: 'Rent',
-      amount: 1000.00,
-      date: DateTime.now(),
-      hebrewDate: JewishDate(),
-      transactionType: Transaction.income,
-    ),
-  ];
-
-  void _openAddExpenseOverlay(Transaction transactionType) {
-    showModalBottomSheet(
-        useSafeArea: true,
-        isScrollControlled: true,
-        context: context,
-        builder: (ctx) => NewExpense(
-              onAddExpense: _addExpense,
-              transactionType: transactionType,
-            ));
-  }
-
-  void _addExpense(Expense expense) {
-    setState(() {
-      _registeredExpenses.add(expense);
-    });
-  }
-
-  void _removeExpense(Expense expense) {
-    final expenseIndex = _registeredExpenses.indexOf(expense);
-    setState(() {
-      _registeredExpenses.remove(expense);
-    });
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Expense removed!'),
-        duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'UNDO',
-          onPressed: () {
-            setState(() {
-              _registeredExpenses.insert(expenseIndex, expense);
-            });
-          },
-        )));
-  }
-
-  void handleScreenChanged(int selectedScreen) {
-    if (selectedScreen == 1 || selectedScreen == 2) {
-      Widget newScreen = ExpensesList(
-        expenses: _registeredExpenses,
-        onRemoveExpense: _removeExpense,
-        transactionType:
-            selectedScreen == 1 ? Transaction.income : Transaction.maaser,
-        onAddExpense: _openAddExpenseOverlay,
-      );
-
-      Navigator.of(context).pop();
-
-      Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-        return newScreen;
-      }));
-      return;
-    }
-    Navigator.of(context).pop();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,16 +16,25 @@ class _ExpensesState extends State<Expenses> {
         title: const Text('Home'),
         actions: [
           IconButton(
-            onPressed: () => _openAddExpenseOverlay(Transaction.income),
+            onPressed: () => Provider.of<CashFlowProvider>(context, listen: false)
+                .openAddCashFlowOverlay(context, TransactionType.income),
             icon: const Icon(Icons.add),
           ),
         ],
       ),
-      drawer: MaaserDrawer(
-        onDestinationSelected: handleScreenChanged,
+      drawer: const MaaserDrawer(
         selectedIndex: 0,
       ),
-      body: Center( child:  MonthItem()) ,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BarChartItem(label: "Maaser", value: 300, maxValue: 500),
+            BarChartItem(label: "Income", value: 100, maxValue: 340),
+          ],
+        ),
+      ),
     );
   }
 }

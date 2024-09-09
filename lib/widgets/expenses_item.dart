@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../models/Expense.dart';
+import '../models/cash_flow.dart';
 
 class ExpenseItem extends StatelessWidget {
   const ExpenseItem({super.key, required this.expense});
-  final Expense expense;
+  final CashFlow expense;
 
   @override
   Widget build(BuildContext context) {

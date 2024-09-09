@@ -1,4 +1,0 @@
-enum Transaction {
-  income,
-  maaser,
-}
