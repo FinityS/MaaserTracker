@@ -44,6 +44,7 @@ dependencies:
   cloud_firestore: ^4.17.5
   provider: ^6.1.2
 
+  intl: any
 dependency_overrides:
   intl: ^0.19.0
 

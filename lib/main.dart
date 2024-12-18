@@ -29,11 +29,11 @@ Future<void> main() async {
                 routes: {
                   '/expenses': (context) => const UserAuth(),
                   '/income': (context) =>
-                      ExpensesList(transactionType: TransactionType.income),
+                      const ExpensesList(transactionType: TransactionType.income),
                   '/maaser': (context) =>
-                      ExpensesList(transactionType: TransactionType.maaser),
+                      const ExpensesList(transactionType: TransactionType.maaser),
                   '/deduction': (context) =>
-                      ExpensesList(transactionType: TransactionType.deductions),
+                      const ExpensesList(transactionType: TransactionType.deductions),
                 },
                 theme: ThemeData(useMaterial3: true),
                 home: const UserAuth(),

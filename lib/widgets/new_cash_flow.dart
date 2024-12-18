@@ -11,7 +11,7 @@ class NewCashFlow extends StatefulWidget {
   final TransactionType transactionType;
   final CashFlow? cashFlow;
 
-  const NewCashFlow({
+  const NewCashFlow({super.key, 
     required this.transactionType,
     this.cashFlow,
   });
@@ -24,6 +24,8 @@ class _NewCashFlowState extends State<NewCashFlow> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final _amountFocusNode = FocusNode();
+  late TransactionType selectedTransaction;
+
   DateTime? _selectedDate;
   JewishDate? _selectedHebrewDate;
 
@@ -36,6 +38,8 @@ class _NewCashFlowState extends State<NewCashFlow> {
       _selectedDate = widget.cashFlow!.date;
       _selectedHebrewDate = widget.cashFlow!.hebrewDate;
     }
+
+    selectedTransaction = widget.transactionType;
 
     _amountFocusNode.addListener(() {
       if (!_amountFocusNode.hasFocus) {
@@ -94,12 +98,42 @@ class _NewCashFlowState extends State<NewCashFlow> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.cashFlow == null ? 'Add Cash Flow' : 'Cash Flow Details'),
+        title: Text(widget.cashFlow == null ? 'Add ${selectedTransaction.toString()}' : '${widget.cashFlow?.transactionType} Details'),
       ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
         child: Column(
           children: [
+            if (widget.cashFlow == null)
+              SegmentedButton<TransactionType>(
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all(Colors.blue),
+                shadowColor: WidgetStateProperty.all(Colors.blue),
+                overlayColor: WidgetStateProperty.all(Colors.blue.withOpacity(0.2)),
+
+              ),
+              segments: const <ButtonSegment<TransactionType>>[
+                ButtonSegment<TransactionType>(
+                  label: Text('Income'),
+                  value: TransactionType.income,
+                  icon: Icon(Icons.attach_money),
+                ),
+                ButtonSegment<TransactionType>(
+                    label: Text('Maaser'),
+                    value: TransactionType.maaser,
+                    icon: Icon(Icons.volunteer_activism)),
+                ButtonSegment<TransactionType>(
+                    label: Text('Maaser Deductions'),
+                    value: TransactionType.deductions,
+                    icon: Icon(Icons.money_off)),
+              ],
+              selected: <TransactionType>{selectedTransaction!},
+              onSelectionChanged: (Set<TransactionType> newSelection) {
+                setState(() {
+                  selectedTransaction = newSelection.first;
+                });
+              },
+            ),
             TextField(
               decoration: const InputDecoration(labelText: 'Title'),
               controller: _titleController,

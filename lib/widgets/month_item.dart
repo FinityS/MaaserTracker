@@ -24,7 +24,7 @@ class MonthItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4.0,
-      child: Container(
+      child: SizedBox(
         width: 250,
         height: 150,
         child: Column(
@@ -35,35 +35,35 @@ class MonthItem extends StatelessWidget {
               children: <Widget>[
                 Text(
                   monthTotals.title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
                 )
               ],
             ),
-            SizedBox(height: 10),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text(
                   //String that represents maaserAmount / incomeAmount
                   'Maaser: \$${monthTotals.maaserAmount.toStringAsFixed(0)} / \$${monthTotals.incomeAmount.toStringAsFixed(0)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   //String that represents the percentage of maaserAmount out of incomeAmount
                   '(${(monthTotals.maaserAmount / monthTotals.incomeAmount * 100).toStringAsFixed(0)}%)',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             //insert horizontal line with low opacity
             Divider(
               color: Colors.grey.withOpacity(0.25),
@@ -75,7 +75,7 @@ class MonthItem extends StatelessWidget {
                 Text(
                   //String that represents amount of money left for maaserAmount to be 10% of incomeAmount
                   '\$${(monthTotals.incomeAmount * 0.1 - monthTotals.maaserAmount).toStringAsFixed(0)} until 10%',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
                   ),
