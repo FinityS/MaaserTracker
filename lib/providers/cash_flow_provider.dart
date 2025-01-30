@@ -11,6 +11,7 @@ class CashFlowProvider extends ChangeNotifier {
   final List<CashFlow> _cashFlows = [];
   final _firestore = FirebaseFirestore.instance;
   final _user = FirebaseAuth.instance.currentUser;
+  final HebrewDateFormatter hebrewDateFormatter = HebrewDateFormatter();
 
   List<CashFlow> get cashFlows => _cashFlows;
 
@@ -38,15 +39,48 @@ class CashFlowProvider extends ChangeNotifier {
     }
   }
 
+  List<String> getAvailableMonths(TransactionType? transactionType, String? year, bool isHebrew) {
+    final months = _cashFlows.where((cashFlow) {
+      final matchesTransactionType = transactionType == null || cashFlow.transactionType == transactionType;
+      final matchesYear = year == null || (isHebrew
+          ? cashFlow.hebrewDate.getJewishYear().toString() == year
+          : DateFormat.y().format(cashFlow.date) == year);
+      return matchesTransactionType && matchesYear;
+    }).map((cashFlow) {
+      return isHebrew
+          ? hebrewDateFormatter.formatMonth(cashFlow.hebrewDate)
+          : DateFormat.MMMM().format(cashFlow.date);
+    }).toSet().toList();
+    months.sort((a, b) => monthOrder[a]!.compareTo(monthOrder[b]!));
+    return months;
+  }
+
+  List<String> getAvailableYears(TransactionType? transactionType, bool isHebrew) {
+    final years = _cashFlows.where((cashFlow) {
+      return transactionType == null || cashFlow.transactionType == transactionType;
+    }).map((cashFlow) {
+      return isHebrew
+          ? cashFlow.hebrewDate.getJewishYear().toString()
+          : DateFormat.y().format(cashFlow.date);
+    }).toSet().toList();
+    years.sort((a, b) => a.compareTo(b));
+    return years;
+  }
+
   List<CashFlow> getFilteredCashFlows({
     TransactionType? transactionType,
     String? month,
     String? year,
+    bool isHebrew = false,
   }) {
     return _cashFlows.where((cashFlow) {
       final matchesTransactionType = transactionType == null || cashFlow.transactionType == transactionType;
-      final matchesMonth = month == null || DateFormat.MMMM().format(cashFlow.date) == month;
-      final matchesYear = year == null || DateFormat.y().format(cashFlow.date) == year;
+      final matchesMonth = month == null || (isHebrew
+          ? hebrewDateFormatter.formatMonth(cashFlow.hebrewDate) == month
+          : DateFormat.MMMM().format(cashFlow.date) == month);
+      final matchesYear = year == null || (isHebrew
+          ? cashFlow.hebrewDate.getJewishYear().toString() == year
+          : DateFormat.y().format(cashFlow.date) == year);
       return matchesTransactionType && matchesMonth && matchesYear;
     }).toList();
   }
@@ -123,5 +157,36 @@ class CashFlowProvider extends ChangeNotifier {
     if (totalIncomeMinusDeductions == 0) return 0;
     return (getTotalMaaserForYear(year) / totalIncomeMinusDeductions) * 100;
   }
+
+  static const monthOrder = {
+    // Gregorian months
+    'January': 1,
+    'February': 2,
+    'March': 3,
+    'April': 4,
+    'May': 5,
+    'June': 6,
+    'July': 7,
+    'August': 8,
+    'September': 9,
+    'October': 10,
+    'November': 11,
+    'December': 12,
+    // Hebrew months
+    'Nisan': 13,
+    'Iyar': 14,
+    'Sivan': 15,
+    'Tammuz': 16,
+    'Av': 17,
+    'Elul': 18,
+    'Tishrei': 19,
+    'Cheshvan': 20,
+    'Kislev': 21,
+    'Tevet': 22,
+    'Shevat': 23,
+    'Adar': 24,
+    'Adar I': 25, // For leap years
+    'Adar II': 26, // For leap years
+  };
 
 }

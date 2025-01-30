@@ -37,6 +37,9 @@ class _NewCashFlowState extends State<NewCashFlow> {
       _amountController.text = widget.cashFlow!.amount.toStringAsFixed(2);
       _selectedDate = widget.cashFlow!.date;
       _selectedHebrewDate = widget.cashFlow!.hebrewDate;
+    } else {
+      _selectedDate = DateTime.now();
+      _selectedHebrewDate = JewishDate.fromDateTime(_selectedDate!);
     }
 
     selectedTransaction = widget.transactionType;
@@ -77,7 +80,7 @@ class _NewCashFlowState extends State<NewCashFlow> {
   void _submitExpenseData() {
     final enteredAmount = double.tryParse(_amountController.text);
     final amountIsValid = enteredAmount != null && enteredAmount > 0;
-    if (_titleController.text.trim().isEmpty || !amountIsValid || _selectedDate == null) {
+    if (!amountIsValid || _selectedDate == null) {
       // Show error
       return;
     }
@@ -127,7 +130,7 @@ class _NewCashFlowState extends State<NewCashFlow> {
                     value: TransactionType.deductions,
                     icon: Icon(Icons.money_off)),
               ],
-              selected: <TransactionType>{selectedTransaction!},
+              selected: <TransactionType>{selectedTransaction},
               onSelectionChanged: (Set<TransactionType> newSelection) {
                 setState(() {
                   selectedTransaction = newSelection.first;
@@ -155,7 +158,7 @@ class _NewCashFlowState extends State<NewCashFlow> {
                 Expanded(
                   child: Text(_selectedDate == null
                       ? 'No date chosen!'
-                      : 'Picked Date: ${DateFormat.yMd().format(_selectedDate!)} ${_selectedHebrewDate!.toString()}'),
+                      : '${DateFormat.yMd().format(_selectedDate!)} ${_selectedHebrewDate!.toString()}'),
                 ),
                 if (widget.cashFlow == null)
                   TextButton(
