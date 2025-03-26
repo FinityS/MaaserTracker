@@ -20,8 +20,8 @@ class BarChartItem extends StatelessWidget {
           const SizedBox(height: 8),
           LayoutBuilder(
             builder: (context, constraints) {
-              // Calculate the width of the green bar based on the max width
-              double barWidth = (value / maxValue) * constraints.maxWidth;
+              // Changed: safely calculate barWidth avoiding division by zero.
+              double barWidth = maxValue > 0 ? (value / maxValue) * constraints.maxWidth : 0;
               return Stack(
                 children: [
                   Container(
@@ -45,7 +45,8 @@ class BarChartItem extends StatelessWidget {
             },
           ),
           const SizedBox(height: 8),
-          Text("\$$value / \$$maxValue"),
+          // Changed: safely display values to prevent NaN in the label.
+          Text("\$${maxValue > 0 ? value.toStringAsFixed(2) : '0.00'} / \$${maxValue > 0 ? maxValue.toStringAsFixed(2) : '0.00'}"),
         ],
       ),
     );

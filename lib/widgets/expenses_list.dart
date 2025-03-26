@@ -63,16 +63,14 @@ class _ExpensesListState extends State<ExpensesList> {
                   ? 'Maaser'
                   : 'Maaser Deductions',
             ),
-            actions: [
-              IconButton(
-                onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
-                    context, widget.transactionType!),
-                icon: const Icon(Icons.add),
-              ),
-            ],
           ),
           drawer: MaaserDrawer(
             selectedIndex: widget.transactionType == TransactionType.income ? 1 : 2,
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
+                context, widget.transactionType!),
+            child: const Icon(Icons.add),
           ),
           body: Column(
             children: [

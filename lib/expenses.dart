@@ -4,6 +4,7 @@ import 'package:maaserTracker/providers/cash_flow_provider.dart';
 import 'package:maaserTracker/widgets/bar_chart_item.dart';
 import 'package:maaserTracker/widgets/maaser_drawer.dart';
 import 'package:provider/provider.dart';
+import 'dart:math';
 
 import 'models/transaction_type.dart';
 
@@ -33,6 +34,9 @@ class _ExpensesState extends State<Expenses> {
         final totalMaaser = cashFlowProvider.getTotalMaaserForYear(_selectedYear!);
         final maaserPercentage = cashFlowProvider.getMaaserPercentageForYear(_selectedYear!);
 
+        final maaserTarget = totalIncomeMinusDeductions * 0.10;
+        final maaserLeftValue = max(maaserTarget - totalMaaser, 0);
+        final maaserLeft = maaserLeftValue.toStringAsFixed(2);
 
         final filteredExpenses = cashFlowProvider.getFilteredCashFlows(
           transactionType: TransactionType.income,
@@ -42,16 +46,14 @@ class _ExpensesState extends State<Expenses> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Home'),
-            actions: [
-              IconButton(
-                onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
-                    context, TransactionType.income),
-                icon: const Icon(Icons.add),
-              ),
-            ],
           ),
           drawer: const MaaserDrawer(
             selectedIndex: 0,
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
+                context, TransactionType.income),
+            child: const Icon(Icons.add),
           ),
           body: Column(
             children: [
@@ -82,16 +84,15 @@ class _ExpensesState extends State<Expenses> {
                   ],
                 ),
               ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: filteredExpenses.length,
-                  itemBuilder: (context, index) => BarChartItem(
-                    label: filteredExpenses[index].title,
-                    value: filteredExpenses[index].amount,
-                    maxValue: 500, // Example max value
+              if (maaserLeftValue > 0)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: BarChartItem(
+                    label: '\$$maaserLeft Maaser Left to 10%',
+                    value: totalMaaser,
+                    maxValue: maaserTarget,
                   ),
                 ),
-              ),
             ],
           ),
         );
@@ -99,3 +100,4 @@ class _ExpensesState extends State<Expenses> {
     );
   }
 }
+
