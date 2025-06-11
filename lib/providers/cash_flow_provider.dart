@@ -25,13 +25,14 @@ class CashFlowProvider extends ChangeNotifier {
           .then((snapshot) {
         final cashFlows = snapshot.docs
             .map((doc) => CashFlow(
-          title: doc['title'],
-          amount: doc['amount'],
-          date: DateTime.fromMillisecondsSinceEpoch(doc['date']),
-          hebrewDate: JewishDate.fromDateTime(
-              DateTime.fromMillisecondsSinceEpoch(doc['date'])),
-          transactionType: TransactionType.values[doc['transactionType']],
-        ))
+                  id: doc.data().containsKey('id') ? doc['id'] : doc.id,
+                  title: doc['title'],
+                  amount: doc['amount'],
+                  date: DateTime.fromMillisecondsSinceEpoch(doc['date']),
+                  hebrewDate: JewishDate.fromDateTime(
+                      DateTime.fromMillisecondsSinceEpoch(doc['date'])),
+                  transactionType: TransactionType.values[doc['transactionType']],
+                ))
             .toList();
         _cashFlows.addAll(cashFlows);
         notifyListeners();
@@ -98,7 +99,8 @@ class CashFlowProvider extends ChangeNotifier {
           .collection('users')
           .doc(user.uid)
           .collection('cashFlows')
-          .add(expense.toMap());
+          .doc(expense.id)
+          .set(expense.toMap());
     }
   }
 
