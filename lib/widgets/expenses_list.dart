@@ -29,6 +29,125 @@ class _ExpensesListState extends State<ExpensesList> {
     _selectedYear = DateFormat.y().format(DateTime.now());
   }
 
+  String _getDateFilterLabel() {
+    final language = _isHebrew ? 'Hebrew' : 'English';
+    if (_selectedMonth == null || _selectedYear == null) {
+      return 'Date Filter ($language)';
+    }
+    if (_selectedMonth == 'Entire Year') {
+      return '$_selectedYear ($language)';
+    }
+    return '${_selectedMonth!} $_selectedYear ($language)';
+  }
+
+  Future<void> _openDateFilterDialog(
+      BuildContext context, CashFlowProvider cashFlowProvider) async {
+    String? tempMonth = _selectedMonth;
+    String? tempYear = _selectedYear;
+    bool tempIsHebrew = _isHebrew;
+    List<String> tempYears = List.from(availableYears);
+    List<String> tempMonths = List.from(availableMonths);
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Select Date Filter'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Hebrew Dates'),
+                      Switch(
+                        value: tempIsHebrew,
+                        onChanged: (value) {
+                          setState(() {
+                            tempIsHebrew = value;
+                            tempYears = cashFlowProvider.getAvailableYears(
+                                widget.transactionType, tempIsHebrew);
+                            if (tempYears.isEmpty) {
+                              tempYears.add(
+                                  DateFormat.y().format(DateTime.now()));
+                            }
+                            tempYear = tempYears.first;
+                            tempMonths = cashFlowProvider.getAvailableMonths(
+                                widget.transactionType,
+                                tempYear,
+                                tempIsHebrew);
+                            tempMonth = 'Entire Year';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  DropdownButton<String>(
+                    value: tempYear,
+                    items: tempYears
+                        .map((year) => DropdownMenuItem(
+                              value: year,
+                              child: Text(year),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        tempYear = value;
+                        tempMonths = cashFlowProvider.getAvailableMonths(
+                            widget.transactionType,
+                            tempYear,
+                            tempIsHebrew);
+                        if (!tempMonths.contains(tempMonth) &&
+                            tempMonth != 'Entire Year') {
+                          tempMonth = 'Entire Year';
+                        }
+                      });
+                    },
+                  ),
+                  DropdownButton<String>(
+                    value: tempMonth,
+                    items: ['Entire Year', ...tempMonths]
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        tempMonth = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, {
+                    'month': tempMonth,
+                    'year': tempYear,
+                    'isHebrew': tempIsHebrew,
+                  }),
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedMonth = result['month'];
+        _selectedYear = result['year'];
+        _isHebrew = result['isHebrew'];
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<CashFlowProvider>(
@@ -74,55 +193,12 @@ class _ExpensesListState extends State<ExpensesList> {
           ),
           body: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  DropdownButton<String>(
-                    value: _selectedMonth,
-                    items: ['Entire Year', ...availableMonths].map((month) {
-                      return DropdownMenuItem(
-                        value: month,
-                        child: Text(month),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedMonth = value;
-                      });
-                    },
-                  ),
-                  DropdownButton<String>(
-                    value: _selectedYear,
-                    items: availableYears.map((year) {
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(year),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedYear = value;
-                      });
-                    },
-                  ),
-                  Switch(
-                    value: _isHebrew,
-                    onChanged: (value) {
-                      setState(() {
-                        _isHebrew = value;
-                        availableYears = cashFlowProvider.getAvailableYears(widget.transactionType, _isHebrew);
-                        _selectedYear = availableYears.first;
-
-                        availableMonths = cashFlowProvider.getAvailableMonths(widget.transactionType, _selectedYear, _isHebrew);
-                        _selectedMonth = 'Entire Year';
-
-                      });
-                    },
-                    activeColor: Colors.blue,
-                    inactiveThumbColor: Colors.grey,
-                    inactiveTrackColor: Colors.grey[300],
-                  ),
-                ],
+              Center(
+                child: ElevatedButton(
+                  onPressed: () =>
+                      _openDateFilterDialog(context, cashFlowProvider),
+                  child: Text(_getDateFilterLabel()),
+                ),
               ),
               Expanded(
                 child: ListView.builder(
