@@ -46,6 +46,13 @@ class _ExpensesListState extends State<ExpensesList> {
 
         availableMonths = cashFlowProvider.getAvailableMonths(widget.transactionType, _selectedYear, _isHebrew);
 
+        // Ensure the selected month exists for the newly selected year
+        if (_selectedMonth != null &&
+            _selectedMonth != 'Entire Year' &&
+            !availableMonths.contains(_selectedMonth)) {
+          _selectedMonth = 'Entire Year';
+        }
+
 
         final filteredExpenses = cashFlowProvider.getFilteredCashFlows(
           transactionType: widget.transactionType,
@@ -102,6 +109,16 @@ class _ExpensesListState extends State<ExpensesList> {
                     onChanged: (value) {
                       setState(() {
                         _selectedYear = value;
+                        // Update available months for the new year
+                        availableMonths = cashFlowProvider.getAvailableMonths(
+                            widget.transactionType, _selectedYear, _isHebrew);
+
+                        // Reset the selected month if it's no longer available
+                        if (_selectedMonth != null &&
+                            _selectedMonth != 'Entire Year' &&
+                            !availableMonths.contains(_selectedMonth)) {
+                          _selectedMonth = 'Entire Year';
+                        }
                       });
                     },
                   ),
