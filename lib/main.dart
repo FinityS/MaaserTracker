@@ -24,7 +24,7 @@ Future<void> main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
       .then((value) => runApp(
             ChangeNotifierProvider(
-              create: (context) => CashFlowProvider()..loadCashFlows(),
+              create: (context) => CashFlowProvider(),
               child: MaterialApp(
                 routes: {
                   '/expenses': (context) => const UserAuth(),

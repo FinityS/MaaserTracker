@@ -10,6 +10,7 @@ const uuid = Uuid();
 const transactionIcons = {
   TransactionType.income: Icons.attach_money,
   TransactionType.maaser: Icons.favorite,
+  TransactionType.deductions: Icons.money_off,
 };
 
 class CashFlow {
