@@ -21,12 +21,13 @@ class CashFlow {
   final TransactionType transactionType;
 
   CashFlow({
+    String? id,
     required this.title,
     required this.amount,
     required this.date,
     required this.hebrewDate,
     required this.transactionType,
-  }) : id = uuid.v4();
+  }) : id = id ?? uuid.v4();
 
   String get formattedDate {
     return formatter.format(date);
