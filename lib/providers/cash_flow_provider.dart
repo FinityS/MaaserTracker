@@ -91,6 +91,38 @@ class CashFlowProvider extends ChangeNotifier {
     return months;
   }
 
+  List<String> getMonthsForYear(String? year, bool isHebrew) {
+    if (isHebrew) {
+      final fallbackYear = JewishDate.fromDateTime(DateTime.now())
+          .getJewishYear()
+          .toString();
+      final parsedYear = int.tryParse(year ?? fallbackYear) ??
+          JewishDate.fromDateTime(DateTime.now()).getJewishYear();
+
+      final jewishDate = JewishDate();
+      jewishDate.setJewishDate(parsedYear, JewishDate.TISHREI, 1);
+      final lastMonth =
+          jewishDate.isJewishLeapYear() ? JewishDate.ADAR_II : JewishDate.ADAR;
+
+      final months = <String>[];
+      for (int month = JewishDate.TISHREI; month <= lastMonth; month++) {
+        final currentMonth = JewishDate();
+        currentMonth.setJewishDate(parsedYear, month, 1);
+        months.add(hebrewDateFormatter.formatMonth(currentMonth));
+      }
+      return months;
+    } else {
+      final fallbackYear = DateFormat.y().format(DateTime.now());
+      final parsedYear = int.tryParse(year ?? fallbackYear) ?? DateTime.now().year;
+      return List.generate(
+        12,
+        (index) => DateFormat.MMMM().format(
+          DateTime(parsedYear, index + 1, 1),
+        ),
+      );
+    }
+  }
+
   List<String> getAvailableYears(TransactionType? transactionType, bool isHebrew) {
     final years = _cashFlows.where((cashFlow) {
       return transactionType == null ||
