@@ -81,7 +81,11 @@ class _NewCashFlowState extends State<NewCashFlow> {
     final enteredAmount = double.tryParse(_amountController.text);
     final amountIsValid = enteredAmount != null && enteredAmount > 0;
     if (!amountIsValid || _selectedDate == null) {
-      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid amount and date.'),
+        ),
+      );
       return;
     }
 
