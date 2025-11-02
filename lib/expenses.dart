@@ -42,6 +42,7 @@ class _ExpensesState extends State<Expenses> {
           transactionType: TransactionType.income,
           year: _selectedYear,
         );
+        final recentTransactions = filteredExpenses.take(5).toList();
 
         return Scaffold(
           appBar: AppBar(
@@ -93,6 +94,36 @@ class _ExpensesState extends State<Expenses> {
                     maxValue: maaserTarget,
                   ),
                 ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: recentTransactions.isEmpty
+                    ? const Center(
+                        child: Text('Add your first income to see it here.'),
+                      )
+                    : ListView.separated(
+                        itemCount: recentTransactions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        itemBuilder: (context, index) {
+                          final cashFlow = recentTransactions[index];
+                          return ListTile(
+                            title: Text(cashFlow.title),
+                            subtitle: Text(
+                              '${DateFormat.yMMMd().format(cashFlow.date)} · ${cashFlow.hebrewDate}',
+                            ),
+                            trailing: Text(
+                              NumberFormat.currency(symbol: '\$', decimalDigits: 2)
+                                  .format(cashFlow.amount),
+                            ),
+                            onTap: () => cashFlowProvider.openAddCashFlowOverlay(
+                              context,
+                              cashFlow.transactionType,
+                              cashFlow: cashFlow,
+                            ),
+                          );
+                        },
+                      ),
+              ),
             ],
           ),
         );

@@ -72,7 +72,12 @@ class _ExpensesListState extends State<ExpensesList> {
             ),
           ),
           drawer: MaaserDrawer(
-            selectedIndex: widget.transactionType == TransactionType.income ? 1 : 2,
+            selectedIndex:
+                widget.transactionType == TransactionType.income
+                    ? 1
+                    : widget.transactionType == TransactionType.maaser
+                        ? 2
+                        : 3,
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
