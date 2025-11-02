@@ -278,13 +278,6 @@ class _ExpensesListState extends State<ExpensesList> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Select month',
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 12,
@@ -444,35 +437,6 @@ class _ExpensesListState extends State<ExpensesList> {
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Column(
                     children: [
-                      Wrap(
-                        spacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('Gregorian'),
-                            selected: !_isHebrew,
-                            onSelected: (value) {
-                              if (!value || !_isHebrew) return;
-                              setState(() {
-                                _isHebrew = false;
-                                _syncHebrewFromGregorian();
-                              });
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Hebrew'),
-                            selected: _isHebrew,
-                            onSelected: (value) {
-                              if (!value || _isHebrew) return;
-                              setState(() {
-                                _isHebrew = true;
-                                _syncGregorianFromHebrew();
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -530,37 +494,6 @@ class _ExpensesListState extends State<ExpensesList> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceVariant
-                              .withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.swipe,
-                              size: 18,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                'Swipe left or right anywhere to change the month',
-                                style:
-                                    Theme.of(context).textTheme.bodySmall,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
