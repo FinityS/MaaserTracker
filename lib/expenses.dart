@@ -241,7 +241,7 @@ class _ExpensesState extends State<Expenses> {
                               icon: Icons.volunteer_activism_rounded,
                               backgroundColor: Theme.of(context)
                                   .colorScheme
-                                  .surfaceVariant,
+                                  .surfaceContainerHighest,
                               textColor:
                                   Theme.of(context).colorScheme.onSurfaceVariant,
                               footer:
@@ -411,7 +411,7 @@ class _YearPickerTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final backgroundColor = isSelected
         ? colorScheme.primary
-        : colorScheme.surfaceVariant;
+        : colorScheme.surfaceContainerHighest;
     final foregroundColor = isSelected
         ? colorScheme.onPrimary
         : colorScheme.onSurfaceVariant;

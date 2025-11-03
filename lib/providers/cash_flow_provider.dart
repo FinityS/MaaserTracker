@@ -224,7 +224,7 @@ class CashFlowProvider extends ChangeNotifier {
     return _cashFlows
         .where((cashFlow) => cashFlow.transactionType == TransactionType.income &&
             DateFormat.y().format(cashFlow.date) == year)
-        .fold(0.0, (sum, cashFlow) => sum + cashFlow.amount);
+        .fold(0.0, (total, cashFlow) => total + cashFlow.amount);
   }
 
   double getTotalDeductionsForYear(String year) {
@@ -232,7 +232,7 @@ class CashFlowProvider extends ChangeNotifier {
         .where((cashFlow) =>
             cashFlow.transactionType == TransactionType.deductions &&
             DateFormat.y().format(cashFlow.date) == year)
-        .fold(0.0, (sum, cashFlow) => sum + cashFlow.amount);
+        .fold(0.0, (total, cashFlow) => total + cashFlow.amount);
   }
 
   double getTotalMaaserForYear(String year) {
@@ -240,7 +240,7 @@ class CashFlowProvider extends ChangeNotifier {
         .where((cashFlow) =>
             cashFlow.transactionType == TransactionType.maaser &&
             DateFormat.y().format(cashFlow.date) == year)
-        .fold(0.0, (sum, cashFlow) => sum + cashFlow.amount);
+        .fold(0.0, (total, cashFlow) => total + cashFlow.amount);
   }
 
   double getTotalIncomeMinusDeductionsForYear(String year) {

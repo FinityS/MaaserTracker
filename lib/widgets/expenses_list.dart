@@ -449,7 +449,7 @@ class _ExpensesListState extends State<ExpensesList> {
                           Material(
                             color: Theme.of(context)
                                 .colorScheme
-                                .surfaceVariant,
+                                .surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(20),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
@@ -549,7 +549,7 @@ class _MonthPickerTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final backgroundColor =
-        isSelected ? colorScheme.primaryContainer : colorScheme.surfaceVariant;
+        isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest;
     final foregroundColor =
         isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant;
 
