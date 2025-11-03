@@ -203,7 +203,7 @@ class _ExpensesState extends State<Expenses> {
                           runSpacing: 12,
                           children: [
                             _StatCard(
-                              label: 'Total income',
+                              label: 'Total Revenue',
                               value: totalIncome,
                               icon: Icons.trending_up_rounded,
                               backgroundColor: Theme.of(context)
@@ -225,7 +225,7 @@ class _ExpensesState extends State<Expenses> {
                                   .onSecondaryContainer,
                             ),
                             _StatCard(
-                              label: 'Net income',
+                              label: 'Net Income',
                               value: totalIncomeMinusDeductions,
                               icon: Icons.account_balance_wallet_outlined,
                               backgroundColor: Theme.of(context)
@@ -236,7 +236,7 @@ class _ExpensesState extends State<Expenses> {
                                   .onTertiaryContainer,
                             ),
                             _StatCard(
-                              label: 'Maaser paid',
+                              label: 'Maaser Paid',
                               value: totalMaaser,
                               icon: Icons.volunteer_activism_rounded,
                               backgroundColor: Theme.of(context)
@@ -258,7 +258,7 @@ class _ExpensesState extends State<Expenses> {
                         ),
                         const SizedBox(height: 28),
                         Text(
-                          'Monthly snapshots',
+                          'Monthly Snapshots',
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -551,7 +551,7 @@ class _MaaserProgressCard extends StatelessWidget {
                     color: colorScheme.primary, size: 28),
                 const SizedBox(width: 12),
                 Text(
-                  'Maaser progress',
+                  'Maaser Progress',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -590,7 +590,7 @@ class _MaaserProgressCard extends StatelessWidget {
                   style: theme.textTheme.bodySmall,
                 ),
                 Text(
-                  '${(maaserTarget <= 0 ? 0 : (maaserPaid / maaserTarget * 100)).clamp(0, double.infinity).toStringAsFixed(1)}% of goal',
+                  '${(maaserTarget <= 0 ? 0 : (maaserPaid / netIncome * 100)).clamp(0, double.infinity).toStringAsFixed(2)}% paid to Maaser!',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -667,7 +667,7 @@ class _MonthlySummaryCarousel extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         child: Center(
           child: Text(
@@ -739,13 +739,13 @@ class _MonthlySummaryCard extends StatelessWidget {
                 LinearProgressIndicator(
                   value: summary.progressForIndicator,
                   minHeight: 6,
-                  backgroundColor: colorScheme.surfaceVariant,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  summary.target <= 0
-                      ? 'No goal set yet'
+                  summary.netIncome <= 0
+                      ? ''
                       : summary.maaser >= summary.target
                           ? 'Goal met!'
                           : '\$${summary.leftToGoal.toStringAsFixed(2)} to go',
