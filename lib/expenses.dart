@@ -1,9 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:kosher_dart/kosher_dart.dart';
 import 'package:maaserTracker/providers/cash_flow_provider.dart';
 import 'package:maaserTracker/widgets/maaser_drawer.dart';
 import 'package:provider/provider.dart';
-import 'dart:math';
 
 import 'models/cash_flow.dart';
 import 'models/transaction_type.dart';
@@ -16,37 +18,39 @@ class Expenses extends StatefulWidget {
 }
 
 class _ExpensesState extends State<Expenses> {
-  late String _selectedYear;
+  late int _selectedGregorianYear;
+  late int _selectedHebrewYear;
+  bool _isHebrewYear = false;
   TransactionType? _recentFilter;
 
   @override
   void initState() {
     super.initState();
-    _selectedYear = DateFormat.y().format(DateTime.now());
+    final now = DateTime.now();
+    _selectedGregorianYear = now.year;
+    _selectedHebrewYear = JewishDate.fromDateTime(now).getJewishYear();
     _recentFilter = null;
   }
 
+  String get _activeYearString =>
+      (_isHebrewYear ? _selectedHebrewYear : _selectedGregorianYear).toString();
+
+  String get _yearPickerLabel =>
+      _isHebrewYear ? '${_selectedHebrewYear.toString()} • Hebrew' : _selectedGregorianYear.toString();
+
   Future<void> _openYearPicker(CashFlowProvider provider) async {
-    final currentYear = int.tryParse(_selectedYear) ?? DateTime.now().year;
-    final availableYears = provider
+    final availableGregorianYears = provider
         .getAvailableYears(null, false)
         .map(int.parse)
         .toList()
       ..sort();
+    final availableHebrewYears = provider
+        .getAvailableYears(null, true)
+        .map(int.parse)
+        .toList()
+      ..sort();
 
-    final int maxYear = availableYears.isNotEmpty
-        ? max(availableYears.last, currentYear)
-        : currentYear;
-    final int minYear = availableYears.isNotEmpty
-        ? min(availableYears.first, currentYear - 9)
-        : currentYear - 9;
-
-    final years = <int>[];
-    for (int year = maxYear; year >= minYear; year--) {
-      years.add(year);
-    }
-
-    final selectedYear = await showModalBottomSheet<int>(
+    final selectedYear = await showModalBottomSheet<_YearPickerResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -54,62 +58,129 @@ class _ExpensesState extends State<Expenses> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        bool isHebrew = _isHebrewYear;
+        final availableGregorianSet = availableGregorianYears.toSet();
+        final availableHebrewSet = availableHebrewYears.toSet();
+        final currentGregorianYear = _selectedGregorianYear;
+        final currentHebrewYear = _selectedHebrewYear;
+
+        List<int> buildYears({required bool forHebrew}) {
+          final source = forHebrew ? availableHebrewYears : availableGregorianYears;
+          final currentYear = forHebrew ? currentHebrewYear : currentGregorianYear;
+          final nowYear = forHebrew
+              ? JewishDate.fromDateTime(DateTime.now()).getJewishYear()
+              : DateTime.now().year;
+          final effectiveCurrent = currentYear;
+          final int maxYear = source.isNotEmpty
+              ? max(source.last, effectiveCurrent)
+              : max(nowYear, effectiveCurrent);
+          final int minYear = source.isNotEmpty
+              ? min(source.first, maxYear - 9)
+              : maxYear - 9;
+          final years = <int>[];
+          for (int year = maxYear; year >= minYear; year--) {
+            years.add(year);
+          }
+          return years;
+        }
+
         return SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Select a year',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 24),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final maxWidth = constraints.maxWidth;
-                      final tileWidth = max((maxWidth - 48) / 3, 96.0);
-                      final yearsWithEntries = availableYears.toSet();
-                      return Wrap(
-                        alignment: WrapAlignment.center,
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              final years = buildYears(forHebrew: isHebrew);
+              final yearsWithEntries = isHebrew ? availableHebrewSet : availableGregorianSet;
+              final selectedYear = isHebrew ? currentHebrewYear : currentGregorianYear;
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
                         spacing: 12,
-                        runSpacing: 12,
-                        children: years
-                            .map(
-                              (year) => SizedBox(
-                                width: tileWidth,
-                                child: _YearPickerTile(
-                                  label: year.toString(),
-                                  isSelected: year == currentYear,
-                                  hasEntries: yearsWithEntries.contains(year),
-                                  onTap: () => Navigator.of(context).pop(year),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      );
-                    },
+                        alignment: WrapAlignment.center,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Gregorian'),
+                            selected: !isHebrew,
+                            onSelected: (_) {
+                              if (isHebrew) {
+                                setModalState(() {
+                                  isHebrew = false;
+                                });
+                              }
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Hebrew'),
+                            selected: isHebrew,
+                            onSelected: (_) {
+                              if (!isHebrew) {
+                                setModalState(() {
+                                  isHebrew = true;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Select a year',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 24),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxWidth = constraints.maxWidth;
+                          final tileWidth = max((maxWidth - 48) / 3, 96.0);
+                          return Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: years
+                                .map(
+                                  (year) => SizedBox(
+                                    width: tileWidth,
+                                    child: _YearPickerTile(
+                                      label: year.toString(),
+                                      isSelected: year == selectedYear,
+                                      hasEntries: yearsWithEntries.contains(year),
+                                      onTap: () => Navigator.of(context).pop(
+                                        _YearPickerResult(
+                                          isHebrew: isHebrew,
+                                          year: year,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         );
       },
@@ -120,7 +191,12 @@ class _ExpensesState extends State<Expenses> {
     }
 
     setState(() {
-      _selectedYear = selectedYear.toString();
+      _isHebrewYear = selectedYear.isHebrew;
+      if (_isHebrewYear) {
+        _selectedHebrewYear = selectedYear.year;
+      } else {
+        _selectedGregorianYear = selectedYear.year;
+      }
     });
   }
 
@@ -128,23 +204,37 @@ class _ExpensesState extends State<Expenses> {
   Widget build(BuildContext context) {
     return Consumer<CashFlowProvider>(
       builder: (context, cashFlowProvider, child) {
-        final totalIncome =
-            cashFlowProvider.getTotalIncomeForYear(_selectedYear);
-        final totalDeductions =
-            cashFlowProvider.getTotalDeductionsForYear(_selectedYear);
-        final totalIncomeMinusDeductions = cashFlowProvider
-            .getTotalIncomeMinusDeductionsForYear(_selectedYear);
-        final totalMaaser =
-            cashFlowProvider.getTotalMaaserForYear(_selectedYear);
-        final maaserPercentage =
-            cashFlowProvider.getMaaserPercentageForYear(_selectedYear);
+        final activeYear = _activeYearString;
+        final isHebrewYear = _isHebrewYear;
+        final totalIncome = cashFlowProvider.getTotalIncomeForYear(
+          activeYear,
+          isHebrew: isHebrewYear,
+        );
+        final totalDeductions = cashFlowProvider.getTotalDeductionsForYear(
+          activeYear,
+          isHebrew: isHebrewYear,
+        );
+        final totalIncomeMinusDeductions =
+            cashFlowProvider.getTotalIncomeMinusDeductionsForYear(
+          activeYear,
+          isHebrew: isHebrewYear,
+        );
+        final totalMaaser = cashFlowProvider.getTotalMaaserForYear(
+          activeYear,
+          isHebrew: isHebrewYear,
+        );
+        final maaserPercentage = cashFlowProvider.getMaaserPercentageForYear(
+          activeYear,
+          isHebrew: isHebrewYear,
+        );
 
         final maaserTarget = totalIncomeMinusDeductions * 0.10;
         final maaserLeftValue = max(maaserTarget - totalMaaser, 0);
         final maaserLeft = maaserLeftValue.toStringAsFixed(2);
 
         final transactionsForYear = cashFlowProvider.getFilteredCashFlows(
-          year: _selectedYear,
+          year: activeYear,
+          isHebrew: isHebrewYear,
         );
         final filteredRecentTransactions = transactionsForYear
             .where((cashFlow) => _recentFilter == null
@@ -154,8 +244,10 @@ class _ExpensesState extends State<Expenses> {
             .toList();
 
         final monthlySummaries = _MonthlySummary.buildForYear(
-          transactionsForYear,
-          int.tryParse(_selectedYear) ?? DateTime.now().year,
+          cashFlows: transactionsForYear,
+          year: isHebrewYear ? _selectedHebrewYear : _selectedGregorianYear,
+          isHebrew: isHebrewYear,
+          hebrewDateFormatter: cashFlowProvider.hebrewDateFormatter,
         );
 
         return Scaffold(
@@ -193,7 +285,7 @@ class _ExpensesState extends State<Expenses> {
                             OutlinedButton.icon(
                               onPressed: () => _openYearPicker(cashFlowProvider),
                               icon: const Icon(Icons.calendar_month_rounded),
-                              label: Text(_selectedYear),
+                              label: Text(_yearPickerLabel),
                             ),
                           ],
                         ),
@@ -448,6 +540,16 @@ class _YearPickerTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _YearPickerResult {
+  const _YearPickerResult({
+    required this.isHebrew,
+    required this.year,
+  });
+
+  final bool isHebrew;
+  final int year;
 }
 
 class _StatCard extends StatelessWidget {
@@ -784,17 +886,60 @@ class _MonthlySummary {
       : (maaser / target).clamp(0.0, 1.0);
   bool get hasData => income > 0 || deductions > 0 || maaser > 0;
 
-  static List<_MonthlySummary> buildForYear(
-    List<CashFlow> cashFlows,
-    int year,
-  ) {
-    final incomeTotals = List<double>.filled(12, 0);
-    final deductionTotals = List<double>.filled(12, 0);
-    final maaserTotals = List<double>.filled(12, 0);
+  static List<_MonthlySummary> buildForYear({
+    required List<CashFlow> cashFlows,
+    required int year,
+    required bool isHebrew,
+    required HebrewDateFormatter hebrewDateFormatter,
+  }) {
+    if (!isHebrew) {
+      final incomeTotals = List<double>.filled(12, 0);
+      final deductionTotals = List<double>.filled(12, 0);
+      final maaserTotals = List<double>.filled(12, 0);
+
+      for (final cashFlow in cashFlows) {
+        final monthIndex = cashFlow.date.month - 1;
+        if (monthIndex < 0 || monthIndex >= 12) {
+          continue;
+        }
+
+        switch (cashFlow.transactionType) {
+          case TransactionType.income:
+            incomeTotals[monthIndex] += cashFlow.amount;
+            break;
+          case TransactionType.deductions:
+            deductionTotals[monthIndex] += cashFlow.amount;
+            break;
+          case TransactionType.maaser:
+            maaserTotals[monthIndex] += cashFlow.amount;
+            break;
+        }
+      }
+
+      return List.generate(12, (index) {
+        final monthDate = DateTime(year, index + 1, 1);
+        return _MonthlySummary(
+          label: DateFormat.MMMM().format(monthDate),
+          income: incomeTotals[index],
+          deductions: deductionTotals[index],
+          maaser: maaserTotals[index],
+        );
+      });
+    }
+
+    final jewishDate = JewishDate();
+    jewishDate.setJewishDate(year, JewishDate.TISHREI, 1);
+    final lastMonth =
+        jewishDate.isJewishLeapYear() ? JewishDate.ADAR_II : JewishDate.ADAR;
+    final monthCount = lastMonth - JewishDate.TISHREI + 1;
+    final incomeTotals = List<double>.filled(monthCount, 0);
+    final deductionTotals = List<double>.filled(monthCount, 0);
+    final maaserTotals = List<double>.filled(monthCount, 0);
 
     for (final cashFlow in cashFlows) {
-      final monthIndex = cashFlow.date.month - 1;
-      if (monthIndex < 0 || monthIndex >= 12) {
+      final monthIndex =
+          cashFlow.hebrewDate.getJewishMonth() - JewishDate.TISHREI;
+      if (monthIndex < 0 || monthIndex >= monthCount) {
         continue;
       }
 
@@ -811,10 +956,12 @@ class _MonthlySummary {
       }
     }
 
-    return List.generate(12, (index) {
-      final monthDate = DateTime(year, index + 1, 1);
+    return List.generate(monthCount, (index) {
+      final jewishMonth = JewishDate.TISHREI + index;
+      final labelDate = JewishDate();
+      labelDate.setJewishDate(year, jewishMonth, 1);
       return _MonthlySummary(
-        label: DateFormat.MMMM().format(monthDate),
+        label: hebrewDateFormatter.formatMonth(labelDate),
         income: incomeTotals[index],
         deductions: deductionTotals[index],
         maaser: maaserTotals[index],
