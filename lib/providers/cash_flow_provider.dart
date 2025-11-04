@@ -220,37 +220,49 @@ class CashFlowProvider extends ChangeNotifier {
             ));
   }
 
-  double getTotalIncomeForYear(String year) {
+  double getTotalIncomeForYear(String year, {bool isHebrew = false}) {
     return _cashFlows
-        .where((cashFlow) => cashFlow.transactionType == TransactionType.income &&
-            DateFormat.y().format(cashFlow.date) == year)
+        .where((cashFlow) =>
+            cashFlow.transactionType == TransactionType.income &&
+            (isHebrew
+                ? cashFlow.hebrewDate.getJewishYear().toString() == year
+                : DateFormat.y().format(cashFlow.date) == year))
         .fold(0.0, (total, cashFlow) => total + cashFlow.amount);
   }
 
-  double getTotalDeductionsForYear(String year) {
+  double getTotalDeductionsForYear(String year, {bool isHebrew = false}) {
     return _cashFlows
         .where((cashFlow) =>
             cashFlow.transactionType == TransactionType.deductions &&
-            DateFormat.y().format(cashFlow.date) == year)
+            (isHebrew
+                ? cashFlow.hebrewDate.getJewishYear().toString() == year
+                : DateFormat.y().format(cashFlow.date) == year))
         .fold(0.0, (total, cashFlow) => total + cashFlow.amount);
   }
 
-  double getTotalMaaserForYear(String year) {
+  double getTotalMaaserForYear(String year, {bool isHebrew = false}) {
     return _cashFlows
         .where((cashFlow) =>
             cashFlow.transactionType == TransactionType.maaser &&
-            DateFormat.y().format(cashFlow.date) == year)
+            (isHebrew
+                ? cashFlow.hebrewDate.getJewishYear().toString() == year
+                : DateFormat.y().format(cashFlow.date) == year))
         .fold(0.0, (total, cashFlow) => total + cashFlow.amount);
   }
 
-  double getTotalIncomeMinusDeductionsForYear(String year) {
-    return getTotalIncomeForYear(year) - getTotalDeductionsForYear(year);
+  double getTotalIncomeMinusDeductionsForYear(String year,
+      {bool isHebrew = false}) {
+    return getTotalIncomeForYear(year, isHebrew: isHebrew) -
+        getTotalDeductionsForYear(year, isHebrew: isHebrew);
   }
 
-  double getMaaserPercentageForYear(String year) {
-    final totalIncomeMinusDeductions = getTotalIncomeMinusDeductionsForYear(year);
+  double getMaaserPercentageForYear(String year, {bool isHebrew = false}) {
+    final totalIncomeMinusDeductions =
+        getTotalIncomeMinusDeductionsForYear(year, isHebrew: isHebrew);
     if (totalIncomeMinusDeductions == 0) return 0;
-    return (getTotalMaaserForYear(year) / totalIncomeMinusDeductions) * 100;
+    return (getTotalMaaserForYear(year, isHebrew: isHebrew) /
+            totalIncomeMinusDeductions) *
+        100;
   }
 
   static const monthOrder = {
