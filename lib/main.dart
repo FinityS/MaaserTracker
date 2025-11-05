@@ -27,13 +27,30 @@ Future<void> main() async {
               create: (context) => CashFlowProvider(),
               child: MaterialApp(
                 routes: {
+                  '/': (context) => const UserAuth(),
                   '/expenses': (context) => const UserAuth(),
-                  '/income': (context) =>
-                      const ExpensesList(transactionType: TransactionType.income),
-                  '/maaser': (context) =>
-                      const ExpensesList(transactionType: TransactionType.maaser),
-                  '/deduction': (context) =>
-                      const ExpensesList(transactionType: TransactionType.deductions),
+                  '/income': (context) => const ExpensesList(
+                        initialTransactionType: TransactionType.income,
+                      ),
+                  '/maaser': (context) => const ExpensesList(
+                        initialTransactionType: TransactionType.maaser,
+                      ),
+                  '/deduction': (context) => const ExpensesList(
+                        initialTransactionType: TransactionType.deductions,
+                      ),
+                },
+                onGenerateRoute: (settings) {
+                  if (settings.name == '/activity') {
+                    final args = settings.arguments;
+                    final filter = args is TransactionType ? args : null;
+                    return MaterialPageRoute(
+                      builder: (_) => ExpensesList(
+                        initialTransactionType: filter,
+                      ),
+                      settings: settings,
+                    );
+                  }
+                  return null;
                 },
                 theme: ThemeData(useMaterial3: true),
                 home: const UserAuth(),

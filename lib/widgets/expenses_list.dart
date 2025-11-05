@@ -1,38 +1,67 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-
 import 'package:intl/intl.dart';
 import 'package:kosher_dart/kosher_dart.dart';
-import 'package:maaserTracker/widgets/expenses_item.dart';
 import 'package:provider/provider.dart';
 
+import '../models/cash_flow.dart';
 import '../models/transaction_type.dart';
 import '../providers/cash_flow_provider.dart';
+import 'cash_flow_tile.dart';
 import 'maaser_drawer.dart';
 
 class ExpensesList extends StatefulWidget {
-  const ExpensesList({super.key, this.transactionType});
+  const ExpensesList({super.key, this.initialTransactionType});
 
-  final TransactionType? transactionType;
+  final TransactionType? initialTransactionType;
 
   @override
-  _ExpensesListState createState() => _ExpensesListState();
+  State<ExpensesList> createState() => _ExpensesListState();
 }
 
 class _ExpensesListState extends State<ExpensesList> {
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _sectionKeys = {};
+  TransactionType? _activeFilter;
+  bool _isHebrew = false;
   late DateTime _selectedGregorianMonth;
   late JewishDate _selectedHebrewMonth;
-  bool _isHebrew = false;
-  double _horizontalDragDistance = 0;
+  String? _pendingScrollSectionId;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
+    _activeFilter = widget.initialTransactionType;
     _selectedGregorianMonth = DateTime(now.year, now.month);
-    _selectedHebrewMonth = JewishDate.fromDateTime(now)
-      ..setJewishDayOfMonth(1);
+    _selectedHebrewMonth = JewishDate.fromDateTime(now)..setJewishDayOfMonth(1);
+  }
+
+  @override
+  void didUpdateWidget(covariant ExpensesList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTransactionType != oldWidget.initialTransactionType &&
+        widget.initialTransactionType != _activeFilter) {
+      _activeFilter = widget.initialTransactionType;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  String _sectionId(bool isHebrew, String yearLabel, String monthLabel) {
+    return '${isHebrew ? 'hebrew' : 'gregorian'}|$yearLabel|$monthLabel';
+  }
+
+  DateTime _gregorianMonthFor(JewishDate jewishDate) {
+    final clone = jewishDate.clone();
+    clone.setJewishDayOfMonth(1);
+    final gregorian = clone.getGregorianCalendar();
+    return DateTime(gregorian.year, gregorian.month);
   }
 
   String _currentMonthLabel(CashFlowProvider provider) {
@@ -49,58 +78,149 @@ class _ExpensesListState extends State<ExpensesList> {
     return DateFormat.y().format(_selectedGregorianMonth);
   }
 
-  void _syncHebrewFromGregorian() {
-    final jewishDate = JewishDate.fromDateTime(_selectedGregorianMonth);
-    jewishDate.setJewishDayOfMonth(1);
-    _selectedHebrewMonth = jewishDate;
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
-  void _syncGregorianFromHebrew() {
-    final gregorian = _selectedHebrewMonth.getGregorianCalendar();
-    _selectedGregorianMonth = DateTime(gregorian.year, gregorian.month);
-  }
-
-  void _goToPreviousMonth() {
+  void _setFilter(TransactionType? filter) {
+    if (_activeFilter == filter) {
+      return;
+    }
     setState(() {
-      if (_isHebrew) {
-        final previous = _selectedHebrewMonth.clone();
-        previous.setJewishDayOfMonth(1);
-        previous.back();
-        previous.setJewishDayOfMonth(1);
-        _selectedHebrewMonth = previous;
-        _syncGregorianFromHebrew();
-      } else {
-        _selectedGregorianMonth = DateTime(
-          _selectedGregorianMonth.year,
-          _selectedGregorianMonth.month - 1,
-        );
-        _syncHebrewFromGregorian();
+      _activeFilter = filter;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scrollToTop();
       }
     });
   }
 
-  void _goToNextMonth() {
-    setState(() {
-      if (_isHebrew) {
-        final next = _selectedHebrewMonth.clone();
-        next.setJewishDayOfMonth(1);
-        next.forward(Calendar.MONTH, 1);
-        next.setJewishDayOfMonth(1);
-        _selectedHebrewMonth = next;
-        _syncGregorianFromHebrew();
-      } else {
-        _selectedGregorianMonth = DateTime(
-          _selectedGregorianMonth.year,
-          _selectedGregorianMonth.month + 1,
-        );
-        _syncHebrewFromGregorian();
+  int _drawerIndex() {
+    if (_activeFilter == null) {
+      return 1;
+    }
+    switch (_activeFilter!) {
+      case TransactionType.income:
+        return 2;
+      case TransactionType.maaser:
+        return 3;
+      case TransactionType.deductions:
+        return 4;
+    }
+  }
+
+  String _titleForFilter() {
+    if (_activeFilter == null) {
+      return 'Activity';
+    }
+    switch (_activeFilter!) {
+      case TransactionType.income:
+        return 'Income';
+      case TransactionType.maaser:
+        return 'Maaser';
+      case TransactionType.deductions:
+        return 'Maaser Deductions';
+    }
+  }
+
+  List<_MonthSection> _buildSections(
+    CashFlowProvider provider,
+    List<CashFlow> cashFlows,
+  ) {
+    final sections = <String, _MonthSection>{};
+    for (final cashFlow in cashFlows) {
+      final monthLabel = _isHebrew
+          ? provider.hebrewDateFormatter.formatMonth(cashFlow.hebrewDate)
+          : DateFormat.MMMM().format(cashFlow.date);
+      final yearLabel = _isHebrew
+          ? cashFlow.hebrewDate.getJewishYear().toString()
+          : DateFormat.y().format(cashFlow.date);
+      final id = _sectionId(_isHebrew, yearLabel, monthLabel);
+      final key = _sectionKeys.putIfAbsent(id, () => GlobalKey());
+      final sortDate = _isHebrew
+          ? _gregorianMonthFor(cashFlow.hebrewDate)
+          : DateTime(cashFlow.date.year, cashFlow.date.month);
+
+      final section = sections.putIfAbsent(
+        id,
+        () => _MonthSection(
+          id: id,
+          monthLabel: monthLabel,
+          yearLabel: yearLabel,
+          isHebrew: _isHebrew,
+          sortDate: sortDate,
+          key: key,
+        ),
+      );
+
+      section.items.add(cashFlow);
+      switch (cashFlow.transactionType) {
+        case TransactionType.income:
+          section.incomeTotal += cashFlow.amount;
+          break;
+        case TransactionType.deductions:
+          section.deductionTotal += cashFlow.amount;
+          break;
+        case TransactionType.maaser:
+          section.maaserTotal += cashFlow.amount;
+          break;
       }
+    }
+
+    final orderedSections = sections.values.toList()
+      ..sort((a, b) => b.sortDate.compareTo(a.sortDate));
+    return orderedSections;
+  }
+
+  _MonthSection? _findSection(List<_MonthSection> sections, String id) {
+    for (final section in sections) {
+      if (section.id == id) {
+        return section;
+      }
+    }
+    return null;
+  }
+
+  void _schedulePendingScroll(List<_MonthSection> sections) {
+    final targetId = _pendingScrollSectionId;
+    if (targetId == null) {
+      return;
+    }
+
+    final targetSection = _findSection(sections, targetId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+      if (targetSection != null && targetSection.key.currentContext != null) {
+        await Scrollable.ensureVisible(
+          targetSection.key.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No entries for that month yet.'),
+          ),
+        );
+      }
+      _pendingScrollSectionId = null;
     });
   }
 
   Future<void> _openMonthPicker(CashFlowProvider provider) async {
     final initialGregorian = _selectedGregorianMonth;
     final initialHebrew = _selectedHebrewMonth.clone();
+
     final result = await showModalBottomSheet<_MonthPickerResult>(
       context: context,
       isScrollControlled: true,
@@ -112,160 +232,160 @@ class _ExpensesListState extends State<ExpensesList> {
         bool isHebrew = _isHebrew;
         int displayedGregorianYear = initialGregorian.year;
         int displayedHebrewYear = initialHebrew.getJewishYear();
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final theme = Theme.of(context);
-            final textTheme = theme.textTheme;
-            final colorScheme = theme.colorScheme;
 
-            void updateCalendar(bool hebrew) {
-              setModalState(() {
-                isHebrew = hebrew;
-              });
-            }
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              final theme = Theme.of(context);
+              final textTheme = theme.textTheme;
+              final colorScheme = theme.colorScheme;
 
-            Widget buildYearHeader({
-              required String label,
-              required VoidCallback onPrevious,
-              required VoidCallback onNext,
-            }) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    tooltip: 'Previous year',
-                    onPressed: onPrevious,
-                    icon: const Icon(Icons.chevron_left_rounded),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      label,
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+              void updateCalendar(bool hebrew) {
+                setModalState(() {
+                  isHebrew = hebrew;
+                });
+              }
+
+              Widget buildYearHeader({
+                required String label,
+                required VoidCallback onPrevious,
+                required VoidCallback onNext,
+              }) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      tooltip: 'Previous year',
+                      onPressed: onPrevious,
+                      icon: const Icon(Icons.chevron_left_rounded),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        label,
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Next year',
-                    onPressed: onNext,
-                    icon: const Icon(Icons.chevron_right_rounded),
-                  ),
-                ],
-              );
-            }
+                    IconButton(
+                      tooltip: 'Next year',
+                      onPressed: onNext,
+                      icon: const Icon(Icons.chevron_right_rounded),
+                    ),
+                  ],
+                );
+              }
 
-            Widget buildMonthGrid({
-              required List<_MonthGridOption> options,
-            }) {
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final maxWidth = constraints.maxWidth;
-                  final targetWidth = math.max((maxWidth - 48) / 3, 96.0);
-                  return Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: options
-                        .map(
-                          (option) => SizedBox(
-                            width: targetWidth,
-                            child: _MonthPickerTile(
-                              label: option.label,
-                              isSelected: option.isSelected,
-                              hasEntries: option.hasEntries,
-                              onTap: option.onTap,
+              Widget buildMonthGrid({
+                required List<_MonthGridOption> options,
+              }) {
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxWidth = constraints.maxWidth;
+                    final targetWidth = math.max((maxWidth - 48) / 3, 96.0);
+                    return Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: options
+                          .map(
+                            (option) => SizedBox(
+                              width: targetWidth,
+                              child: _MonthPickerTile(
+                                label: option.label,
+                                isSelected: option.isSelected,
+                                hasEntries: option.hasEntries,
+                                onTap: option.onTap,
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
-              );
-            }
-
-            List<_MonthGridOption> buildGregorianOptions() {
-              final availableMonths = provider
-                  .getAvailableMonths(
-                    widget.transactionType,
-                    displayedGregorianYear.toString(),
-                    false,
-                  )
-                  .toSet();
-              final monthNames = List.generate(12, (index) {
-                final date = DateTime(displayedGregorianYear, index + 1, 1);
-                final label = DateFormat.MMMM().format(date);
-                final isSelected =
-                    initialGregorian.year == displayedGregorianYear &&
-                        initialGregorian.month == index + 1;
-                final hasEntries = availableMonths.contains(label);
-                return _MonthGridOption(
-                  label: label,
-                  isSelected: isSelected,
-                  hasEntries: hasEntries,
-                  onTap: () {
-                    Navigator.of(context).pop(
-                      _MonthPickerResult(
-                        isHebrew: false,
-                        gregorianMonth: DateTime(displayedGregorianYear, index + 1),
-                      ),
+                          )
+                          .toList(),
                     );
                   },
                 );
-              });
-              return monthNames;
-            }
+              }
 
-            List<_MonthGridOption> buildHebrewOptions() {
-              final formatter = provider.hebrewDateFormatter;
-              final jewishDate = JewishDate();
-              jewishDate.setJewishDate(displayedHebrewYear, JewishDate.TISHREI, 1);
-              final lastMonth = jewishDate.isJewishLeapYear()
-                  ? JewishDate.ADAR_II
-                  : JewishDate.ADAR;
-              final availableMonths = provider
-                  .getAvailableMonths(
-                    widget.transactionType,
-                    displayedHebrewYear.toString(),
-                    true,
-                  )
-                  .toSet();
+              List<_MonthGridOption> buildGregorianOptions() {
+                final availableMonths = provider
+                    .getAvailableMonths(
+                      _activeFilter,
+                      displayedGregorianYear.toString(),
+                      false,
+                    )
+                    .toSet();
 
-              final options = <_MonthGridOption>[];
-              for (int month = JewishDate.TISHREI; month <= lastMonth; month++) {
-                final current = JewishDate();
-                current.setJewishDate(displayedHebrewYear, month, 1);
-                final label = formatter.formatMonth(current);
-                final isSelected =
-                    initialHebrew.getJewishYear() == displayedHebrewYear &&
-                        initialHebrew.getJewishMonth() == month;
-                options.add(
-                  _MonthGridOption(
+                return List.generate(12, (index) {
+                  final date = DateTime(displayedGregorianYear, index + 1, 1);
+                  final label = DateFormat.MMMM().format(date);
+                  final isSelected = initialGregorian.year == displayedGregorianYear &&
+                      initialGregorian.month == index + 1 &&
+                      !isHebrew;
+
+                  return _MonthGridOption(
                     label: label,
                     isSelected: isSelected,
                     hasEntries: availableMonths.contains(label),
                     onTap: () {
-                      final chosen = JewishDate();
-                      chosen.setJewishDate(displayedHebrewYear, month, 1);
                       Navigator.of(context).pop(
                         _MonthPickerResult(
-                          isHebrew: true,
-                          jewishMonth: chosen,
+                          isHebrew: false,
+                          gregorianMonth: date,
                         ),
                       );
                     },
-                  ),
-                );
+                  );
+                });
               }
-              return options;
-            }
 
-            return SafeArea(
-              child: SingleChildScrollView(
+              List<_MonthGridOption> buildHebrewOptions() {
+                final availableMonths = provider
+                    .getAvailableMonths(
+                      _activeFilter,
+                      displayedHebrewYear.toString(),
+                      true,
+                    )
+                    .toSet();
+                final months = provider.getMonthsForYear(
+                  displayedHebrewYear.toString(),
+                  true,
+                );
+
+                return List.generate(months.length, (index) {
+                  final label = months[index];
+                  final isSelected =
+                      initialHebrew.getJewishYear() == displayedHebrewYear &&
+                          provider.hebrewDateFormatter.formatMonth(initialHebrew) ==
+                              label &&
+                          isHebrew;
+
+                  return _MonthGridOption(
+                    label: label,
+                    isSelected: isSelected,
+                    hasEntries: availableMonths.contains(label),
+                    onTap: () {
+                      final jewishMonth = JewishDate()
+                        ..setJewishDate(
+                          displayedHebrewYear,
+                          index + JewishDate.TISHREI,
+                          1,
+                        );
+                      Navigator.of(context).pop(
+                        _MonthPickerResult(
+                          isHebrew: true,
+                          jewishMonth: jewishMonth,
+                        ),
+                      );
+                    },
+                  );
+                });
+              }
+
+              return Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                 ),
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -295,59 +415,54 @@ class _ExpensesListState extends State<ExpensesList> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        child: Column(
-                          key: ValueKey<bool>(isHebrew),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isHebrew)
-                              buildYearHeader(
-                                label: displayedHebrewYear.toString(),
-                                onPrevious: () {
-                                  setModalState(() {
-                                    displayedHebrewYear = math.max(3761, displayedHebrewYear - 1);
-                                  });
-                                },
-                                onNext: () {
-                                  setModalState(() {
-                                    displayedHebrewYear++;
-                                  });
-                                },
-                              )
-                            else
-                              buildYearHeader(
-                                label: displayedGregorianYear.toString(),
-                                onPrevious: () {
-                                  setModalState(() {
-                                    displayedGregorianYear = math.max(1, displayedGregorianYear - 1);
-                                  });
-                                },
-                                onNext: () {
-                                  setModalState(() {
-                                    displayedGregorianYear++;
-                                  });
-                                },
-                              ),
-                            const SizedBox(height: 20),
-                            buildMonthGrid(
-                              options: isHebrew
-                                  ? buildHebrewOptions()
-                                  : buildGregorianOptions(),
-                            ),
-                          ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Select a month',
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      if (!isHebrew) ...[
+                        buildYearHeader(
+                          label: displayedGregorianYear.toString(),
+                          onPrevious: () {
+                            setModalState(() {
+                              displayedGregorianYear--;
+                            });
+                          },
+                          onNext: () {
+                            setModalState(() {
+                              displayedGregorianYear++;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        buildMonthGrid(options: buildGregorianOptions()),
+                      ] else ...[
+                        buildYearHeader(
+                          label: '$displayedHebrewYear • Hebrew',
+                          onPrevious: () {
+                            setModalState(() {
+                              displayedHebrewYear--;
+                            });
+                          },
+                          onNext: () {
+                            setModalState(() {
+                              displayedHebrewYear++;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        buildMonthGrid(options: buildHebrewOptions()),
+                      ],
                       const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
@@ -360,156 +475,231 @@ class _ExpensesListState extends State<ExpensesList> {
       _isHebrew = result.isHebrew;
       if (result.isHebrew) {
         _selectedHebrewMonth = result.jewishMonth!;
-        _syncGregorianFromHebrew();
+        final gregorian = _selectedHebrewMonth.getGregorianCalendar();
+        _selectedGregorianMonth = DateTime(gregorian.year, gregorian.month);
       } else {
         _selectedGregorianMonth = result.gregorianMonth!;
-        _syncHebrewFromGregorian();
+        _selectedHebrewMonth = JewishDate.fromDateTime(_selectedGregorianMonth)
+          ..setJewishDayOfMonth(1);
       }
+      final monthLabel = _currentMonthLabel(provider);
+      final yearLabel = _currentYearLabel();
+      _pendingScrollSectionId = _sectionId(_isHebrew, yearLabel, monthLabel);
     });
+  }
+
+  void _handleAdd(CashFlowProvider provider) {
+    if (_activeFilter != null) {
+      provider.openAddCashFlowOverlay(context, _activeFilter!);
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.trending_up_rounded),
+                title: const Text('Add income'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  provider.openAddCashFlowOverlay(
+                    context,
+                    TransactionType.income,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.remove_circle_outline),
+                title: const Text('Add deduction'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  provider.openAddCashFlowOverlay(
+                    context,
+                    TransactionType.deductions,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.volunteer_activism_rounded),
+                title: const Text('Add maaser'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  provider.openAddCashFlowOverlay(
+                    context,
+                    TransactionType.maaser,
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onSelected,
+  }) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onSelected(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<CashFlowProvider>(
       builder: (context, cashFlowProvider, child) {
+        final filteredExpenses = cashFlowProvider.getFilteredCashFlows(
+          transactionType: _activeFilter,
+        );
+        final sections = _buildSections(cashFlowProvider, filteredExpenses);
+        _schedulePendingScroll(sections);
+
         final monthLabel = _currentMonthLabel(cashFlowProvider);
         final yearLabel = _currentYearLabel();
 
-        final filteredExpenses = cashFlowProvider.getFilteredCashFlows(
-          transactionType: widget.transactionType,
-          month: monthLabel,
-          year: yearLabel,
-          isHebrew: _isHebrew,
-        );
-
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              widget.transactionType == TransactionType.income
-                  ? 'Income'
-                  : widget.transactionType == TransactionType.maaser
-                  ? 'Maaser'
-                  : 'Maaser Deductions',
-            ),
+            title: Text(_titleForFilter()),
           ),
-          drawer: MaaserDrawer(
-            selectedIndex:
-                widget.transactionType == TransactionType.income
-                    ? 1
-                    : widget.transactionType == TransactionType.maaser
-                        ? 2
-                        : 3,
-          ),
+          drawer: MaaserDrawer(selectedIndex: _drawerIndex()),
           floatingActionButton: FloatingActionButton(
-            onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
-                context, widget.transactionType!),
+            onPressed: () => _handleAdd(cashFlowProvider),
             child: const Icon(Icons.add),
           ),
-          body: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onHorizontalDragStart: (_) {
-              _horizontalDragDistance = 0;
-            },
-            onHorizontalDragUpdate: (details) {
-              _horizontalDragDistance += details.delta.dx;
-            },
-            onHorizontalDragEnd: (details) {
-              final velocity = details.primaryVelocity ?? 0;
-              if (velocity.abs() > 250) {
-                if (velocity < 0) {
-                  _goToNextMonth();
-                } else {
-                  _goToPreviousMonth();
-                }
-              } else if (_horizontalDragDistance.abs() > 80) {
-                if (_horizontalDragDistance < 0) {
-                  _goToNextMonth();
-                } else {
-                  _goToPreviousMonth();
-                }
-              }
-              _horizontalDragDistance = 0;
-            },
-            child: Column(
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          body: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          IconButton(
-                            tooltip: 'Previous month',
-                            icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                            onPressed: _goToPreviousMonth,
+                          _buildFilterChip(
+                            label: 'All entries',
+                            isSelected: _activeFilter == null,
+                            onSelected: () => _setFilter(null),
                           ),
-                          const SizedBox(width: 8),
-                          Material(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(20),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () => _openMonthPicker(cashFlowProvider),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      monthLabel,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(fontWeight: FontWeight.w700),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      yearLabel,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          _buildFilterChip(
+                            label: 'Income',
+                            isSelected: _activeFilter == TransactionType.income,
+                            onSelected: () => _setFilter(TransactionType.income),
                           ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            tooltip: 'Next month',
-                            icon: const Icon(Icons.chevron_right_rounded, size: 28),
-                            onPressed: _goToNextMonth,
+                          _buildFilterChip(
+                            label: 'Deductions',
+                            isSelected:
+                                _activeFilter == TransactionType.deductions,
+                            onSelected: () =>
+                                _setFilter(TransactionType.deductions),
+                          ),
+                          _buildFilterChip(
+                            label: 'Maaser',
+                            isSelected: _activeFilter == TransactionType.maaser,
+                            onSelected: () =>
+                                _setFilter(TransactionType.maaser),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
+                      FilledButton.tonalIcon(
+                        onPressed: sections.isEmpty
+                            ? null
+                            : () => _openMonthPicker(cashFlowProvider),
+                        icon: const Icon(Icons.calendar_month),
+                        label: Text('Jump to $monthLabel $yearLabel'),
+                      ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredExpenses.length,
-                    itemBuilder: (context, index) => GestureDetector(
-                      onTap: () => cashFlowProvider.openAddCashFlowOverlay(
-                          context, filteredExpenses[index].transactionType,
-                          cashFlow: filteredExpenses[index]),
-                      child: ExpenseItem(expense: filteredExpenses[index]),
+              ),
+              if (sections.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        _activeFilter == null
+                            ? 'Add your first entry to start tracking activity.'
+                            : 'No entries for this category yet.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
                     ),
                   ),
-                ),
+                )
+              else ...[
+                for (final section in sections) ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+                    sliver: SliverToBoxAdapter(
+                      child: Container(
+                        key: section.key,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${section.monthLabel} ${section.yearLabel}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 12),
+                            _MonthlySummaryRow(section: section),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final cashFlow = section.items[index];
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: index == section.items.length - 1 ? 0 : 12,
+                            ),
+                            child: CashFlowTile(
+                              cashFlow: cashFlow,
+                              onTap: () => cashFlowProvider
+                                  .openAddCashFlowOverlay(
+                                context,
+                                cashFlow.transactionType,
+                                cashFlow: cashFlow,
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: section.items.length,
+                      ),
+                    ),
+                  ),
+                ],
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
-            ),
+            ],
           ),
         );
       },
@@ -517,8 +707,131 @@ class _ExpensesListState extends State<ExpensesList> {
   }
 }
 
+class _MonthlySummaryRow extends StatelessWidget {
+  const _MonthlySummaryRow({required this.section});
+
+  final _MonthSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _SummaryCard(
+          label: 'Income',
+          value: section.incomeTotal,
+          icon: Icons.trending_up_rounded,
+          backgroundColor: colorScheme.primaryContainer,
+          textColor: colorScheme.onPrimaryContainer,
+        ),
+        _SummaryCard(
+          label: 'Deductions',
+          value: section.deductionTotal,
+          icon: Icons.remove_circle_outline,
+          backgroundColor: colorScheme.secondaryContainer,
+          textColor: colorScheme.onSecondaryContainer,
+        ),
+        _SummaryCard(
+          label: 'Maaser',
+          value: section.maaserTotal,
+          icon: Icons.volunteer_activism_rounded,
+          backgroundColor: colorScheme.tertiaryContainer,
+          textColor: colorScheme.onTertiaryContainer,
+        ),
+        _SummaryCard(
+          label: 'Net',
+          value: section.netTotal,
+          icon: Icons.account_balance_wallet_outlined,
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          textColor: colorScheme.onSurfaceVariant,
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.backgroundColor,
+    required this.textColor,
+  });
+
+  final String label;
+  final double value;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 160),
+      child: Card(
+        elevation: 0,
+        color: backgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: textColor.withOpacity(0.85)),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: textColor.withOpacity(0.9),
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                currency.format(value),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: textColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthSection {
+  _MonthSection({
+    required this.id,
+    required this.monthLabel,
+    required this.yearLabel,
+    required this.isHebrew,
+    required this.sortDate,
+    required this.key,
+  });
+
+  final String id;
+  final String monthLabel;
+  final String yearLabel;
+  final bool isHebrew;
+  final DateTime sortDate;
+  final GlobalKey key;
+  final List<CashFlow> items = [];
+  double incomeTotal = 0;
+  double deductionTotal = 0;
+  double maaserTotal = 0;
+
+  double get netTotal => incomeTotal - deductionTotal - maaserTotal;
+}
+
 class _MonthGridOption {
-  const _MonthGridOption({
+  _MonthGridOption({
     required this.label,
     required this.isSelected,
     required this.hasEntries,
@@ -548,10 +861,16 @@ class _MonthPickerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final backgroundColor =
-        isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest;
-    final foregroundColor =
-        isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant;
+    final backgroundColor = isSelected
+        ? colorScheme.primary
+        : hasEntries
+            ? colorScheme.surfaceContainerHighest
+            : colorScheme.surfaceVariant;
+    final foregroundColor = isSelected
+        ? colorScheme.onPrimary
+        : hasEntries
+            ? colorScheme.onSurface
+            : colorScheme.onSurfaceVariant;
 
     return Material(
       color: backgroundColor,
@@ -560,38 +879,27 @@ class _MonthPickerTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.bodyLarge?.copyWith(
                   color: foregroundColor,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    hasEntries ? Icons.circle : Icons.circle_outlined,
-                    size: 10,
-                    color: hasEntries
-                        ? colorScheme.secondary
-                        : foregroundColor.withOpacity(0.5),
+              if (!hasEntries && !isSelected) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'No entries',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: foregroundColor.withOpacity(0.7),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    hasEntries ? 'Has entries' : 'No entries',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: foregroundColor.withOpacity(hasEntries ? 0.9 : 0.7),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ],
           ),
         ),
@@ -601,7 +909,7 @@ class _MonthPickerTile extends StatelessWidget {
 }
 
 class _MonthPickerResult {
-  const _MonthPickerResult({
+  _MonthPickerResult({
     required this.isHebrew,
     this.gregorianMonth,
     this.jewishMonth,
