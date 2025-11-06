@@ -28,7 +28,6 @@ Future<void> main() async {
               child: MaterialApp(
                 routes: {
                   '/': (context) => const UserAuth(),
-                  '/expenses': (context) => const UserAuth(),
                   '/income': (context) => const ExpensesList(
                         initialTransactionType: TransactionType.income,
                       ),
@@ -53,7 +52,6 @@ Future<void> main() async {
                   return null;
                 },
                 theme: ThemeData(useMaterial3: true),
-                home: const UserAuth(),
               ),
             ),
           ));
