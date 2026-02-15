@@ -17,7 +17,7 @@ class ExpensesList extends StatefulWidget {
   final TransactionType? transactionType;
 
   @override
-  _ExpensesListState createState() => _ExpensesListState();
+  State<ExpensesList> createState() => _ExpensesListState();
 }
 
 class _ExpensesListState extends State<ExpensesList> {
@@ -368,41 +368,90 @@ class _ExpensesListState extends State<ExpensesList> {
     });
   }
 
+  String _screenTitle(TransactionType? type) {
+    switch (type) {
+      case TransactionType.income:
+        return 'Income';
+      case TransactionType.maaser:
+        return 'Maaser';
+      case TransactionType.deductions:
+        return 'Maaser Deductions';
+      case null:
+        return 'Transactions';
+    }
+  }
+
+  String _screenSubtitle(TransactionType? type) {
+    switch (type) {
+      case TransactionType.income:
+        return 'Track your monthly revenue entries';
+      case TransactionType.maaser:
+        return 'Review what you already gave';
+      case TransactionType.deductions:
+        return 'Review deductible entries for the month';
+      case null:
+        return 'Review your monthly activity';
+    }
+  }
+
+  int _drawerIndex(TransactionType? type) {
+    switch (type) {
+      case TransactionType.income:
+        return 1;
+      case TransactionType.maaser:
+        return 2;
+      case TransactionType.deductions:
+        return 3;
+      case null:
+        return 0;
+    }
+  }
+
+  void _navigateToTransactionType(TransactionType type) {
+    String route;
+    switch (type) {
+      case TransactionType.income:
+        route = '/income';
+        break;
+      case TransactionType.maaser:
+        route = '/maaser';
+        break;
+      case TransactionType.deductions:
+        route = '/deduction';
+        break;
+    }
+
+    Navigator.of(context).pushReplacementNamed(route);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<CashFlowProvider>(
       builder: (context, cashFlowProvider, child) {
         final monthLabel = _currentMonthLabel(cashFlowProvider);
         final yearLabel = _currentYearLabel();
-
         final filteredExpenses = cashFlowProvider.getFilteredCashFlows(
           transactionType: widget.transactionType,
           month: monthLabel,
           year: yearLabel,
           isHebrew: _isHebrew,
         );
+        final totalAmount = filteredExpenses.fold<double>(
+          0,
+          (sum, cashFlow) => sum + cashFlow.amount,
+        );
+        final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              widget.transactionType == TransactionType.income
-                  ? 'Income'
-                  : widget.transactionType == TransactionType.maaser
-                  ? 'Maaser'
-                  : 'Maaser Deductions',
-            ),
+            title: Text(_screenTitle(widget.transactionType)),
           ),
-          drawer: MaaserDrawer(
-            selectedIndex:
-                widget.transactionType == TransactionType.income
-                    ? 1
-                    : widget.transactionType == TransactionType.maaser
-                        ? 2
-                        : 3,
-          ),
+          drawer: MaaserDrawer(selectedIndex: _drawerIndex(widget.transactionType)),
           floatingActionButton: FloatingActionButton(
             onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
-                context, widget.transactionType!),
+              context,
+              widget.transactionType!,
+            ),
             child: const Icon(Icons.add),
           ),
           body: GestureDetector(
@@ -433,10 +482,73 @@ class _ExpensesListState extends State<ExpensesList> {
             child: Column(
               children: [
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        _screenTitle(widget.transactionType),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _screenSubtitle(widget.transactionType),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Income'),
+                            selected: widget.transactionType == TransactionType.income,
+                            onSelected: (_) => _navigateToTransactionType(TransactionType.income),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Maaser'),
+                            selected: widget.transactionType == TransactionType.maaser,
+                            onSelected: (_) => _navigateToTransactionType(TransactionType.maaser),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Deductions'),
+                            selected: widget.transactionType == TransactionType.deductions,
+                            onSelected: (_) => _navigateToTransactionType(TransactionType.deductions),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Card(
+                        elevation: 0,
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _MonthlySummaryItem(
+                                  label: 'Entries',
+                                  value: filteredExpenses.length.toString(),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _MonthlySummaryItem(
+                                  label: 'Total',
+                                  value: currency.format(totalAmount),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -447,16 +559,13 @@ class _ExpensesListState extends State<ExpensesList> {
                           ),
                           const SizedBox(width: 8),
                           Material(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(20),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
                               onTap: () => _openMonthPicker(cashFlowProvider),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -470,13 +579,8 @@ class _ExpensesListState extends State<ExpensesList> {
                                     const SizedBox(height: 2),
                                     Text(
                                       yearLabel,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            color: Theme.of(context).colorScheme.primary,
                                             fontWeight: FontWeight.w600,
                                           ),
                                     ),
@@ -493,20 +597,28 @@ class _ExpensesListState extends State<ExpensesList> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredExpenses.length,
-                    itemBuilder: (context, index) => GestureDetector(
-                      onTap: () => cashFlowProvider.openAddCashFlowOverlay(
-                          context, filteredExpenses[index].transactionType,
-                          cashFlow: filteredExpenses[index]),
-                      child: ExpenseItem(expense: filteredExpenses[index]),
-                    ),
-                  ),
+                  child: filteredExpenses.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No entries for this month yet.',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: filteredExpenses.length,
+                          itemBuilder: (context, index) => GestureDetector(
+                            onTap: () => cashFlowProvider.openAddCashFlowOverlay(
+                              context,
+                              filteredExpenses[index].transactionType,
+                              cashFlow: filteredExpenses[index],
+                            ),
+                            child: ExpenseItem(expense: filteredExpenses[index]),
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -516,6 +628,35 @@ class _ExpensesListState extends State<ExpensesList> {
     );
   }
 }
+
+class _MonthlySummaryItem extends StatelessWidget {
+  const _MonthlySummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
 
 class _MonthGridOption {
   const _MonthGridOption({
