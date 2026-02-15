@@ -14,7 +14,7 @@ class Expenses extends StatefulWidget {
   const Expenses({super.key});
 
   @override
-  _ExpensesState createState() => _ExpensesState();
+  State<Expenses> createState() => _ExpensesState();
 }
 
 class _ExpensesState extends State<Expenses> {

@@ -17,7 +17,7 @@ class ExpensesList extends StatefulWidget {
   final TransactionType? transactionType;
 
   @override
-  _ExpensesListState createState() => _ExpensesListState();
+  State<ExpensesList> createState() => _ExpensesListState();
 }
 
 class _ExpensesListState extends State<ExpensesList> {
@@ -408,11 +408,18 @@ class _ExpensesListState extends State<ExpensesList> {
   }
 
   void _navigateToTransactionType(TransactionType type) {
-    final route = switch (type) {
-      TransactionType.income => '/income',
-      TransactionType.maaser => '/maaser',
-      TransactionType.deductions => '/deduction',
-    };
+    String route;
+    switch (type) {
+      case TransactionType.income:
+        route = '/income';
+        break;
+      case TransactionType.maaser:
+        route = '/maaser';
+        break;
+      case TransactionType.deductions:
+        route = '/deduction';
+        break;
+    }
 
     Navigator.of(context).pushReplacementNamed(route);
   }
