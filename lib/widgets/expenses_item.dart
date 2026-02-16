@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../models/cash_flow.dart';
 import '../models/transaction_type.dart';
@@ -7,65 +8,102 @@ class ExpenseItem extends StatelessWidget {
   const ExpenseItem({super.key, required this.expense});
   final CashFlow expense;
 
-  Color _amountColor(BuildContext context) {
+  Color _typeColor(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     switch (expense.transactionType) {
       case TransactionType.income:
         return colorScheme.primary;
-      case TransactionType.maaser:
-        return colorScheme.tertiary;
       case TransactionType.deductions:
         return colorScheme.secondary;
+      case TransactionType.maaser:
+        return colorScheme.tertiary;
+    }
+  }
+
+  IconData _typeIcon() {
+    switch (expense.transactionType) {
+      case TransactionType.income:
+        return Icons.trending_up_rounded;
+      case TransactionType.deductions:
+        return Icons.remove_circle_outline;
+      case TransactionType.maaser:
+        return Icons.volunteer_activism_rounded;
+    }
+  }
+
+  String _typeLabel() {
+    switch (expense.transactionType) {
+      case TransactionType.income:
+        return 'Income';
+      case TransactionType.deductions:
+        return 'Deduction';
+      case TransactionType.maaser:
+        return 'Maaser';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final amountColor = _amountColor(context);
+    final theme = Theme.of(context);
+    final color = _typeColor(context);
+    final amountFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
     return Card(
       elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              backgroundColor: colorScheme.surfaceContainerHighest,
-              foregroundColor: colorScheme.onSurfaceVariant,
-              child: Icon(transactionIcons[expense.transactionType]),
+              backgroundColor: color.withOpacity(0.1),
+              foregroundColor: color,
+              child: Icon(_typeIcon()),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     expense.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${expense.formattedDate} • ${expense.hebrewDate}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                    '${DateFormat.yMMMd().format(expense.date)} · ${expense.hebrewDate}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _typeLabel(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Text(
-              '\$${expense.amount.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: amountColor,
-                    fontWeight: FontWeight.w700,
-                  ),
+              amountFormat.format(expense.amount),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
