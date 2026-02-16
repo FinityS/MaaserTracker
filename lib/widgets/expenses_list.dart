@@ -388,127 +388,186 @@ class _ExpensesListState extends State<ExpensesList> {
               widget.transactionType == TransactionType.income
                   ? 'Income'
                   : widget.transactionType == TransactionType.maaser
-                  ? 'Maaser'
-                  : 'Maaser Deductions',
+                      ? 'Maaser'
+                      : 'Maaser Deductions',
             ),
           ),
           drawer: MaaserDrawer(
-            selectedIndex:
-                widget.transactionType == TransactionType.income
-                    ? 1
-                    : widget.transactionType == TransactionType.maaser
-                        ? 2
-                        : 3,
+            selectedIndex: widget.transactionType == TransactionType.income
+                ? 1
+                : widget.transactionType == TransactionType.maaser
+                    ? 2
+                    : 3,
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => cashFlowProvider.openAddCashFlowOverlay(
-                context, widget.transactionType!),
+              context,
+              widget.transactionType!,
+            ),
             child: const Icon(Icons.add),
           ),
-          body: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onHorizontalDragStart: (_) {
-              _horizontalDragDistance = 0;
-            },
-            onHorizontalDragUpdate: (details) {
-              _horizontalDragDistance += details.delta.dx;
-            },
-            onHorizontalDragEnd: (details) {
-              final velocity = details.primaryVelocity ?? 0;
-              if (velocity.abs() > 250) {
-                if (velocity < 0) {
-                  _goToNextMonth();
-                } else {
-                  _goToPreviousMonth();
+          body: SafeArea(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: (_) {
+                _horizontalDragDistance = 0;
+              },
+              onHorizontalDragUpdate: (details) {
+                _horizontalDragDistance += details.delta.dx;
+              },
+              onHorizontalDragEnd: (details) {
+                final velocity = details.primaryVelocity ?? 0;
+                if (velocity.abs() > 250) {
+                  if (velocity < 0) {
+                    _goToNextMonth();
+                  } else {
+                    _goToPreviousMonth();
+                  }
+                } else if (_horizontalDragDistance.abs() > 80) {
+                  if (_horizontalDragDistance < 0) {
+                    _goToNextMonth();
+                  } else {
+                    _goToPreviousMonth();
+                  }
                 }
-              } else if (_horizontalDragDistance.abs() > 80) {
-                if (_horizontalDragDistance < 0) {
-                  _goToNextMonth();
-                } else {
-                  _goToPreviousMonth();
-                }
-              }
-              _horizontalDragDistance = 0;
-            },
-            child: Column(
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                _horizontalDragDistance = 0;
+              },
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            tooltip: 'Previous month',
-                            icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                            onPressed: _goToPreviousMonth,
+                          Text(
+                            'Month overview',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                          const SizedBox(width: 8),
-                          Material(
+                          const SizedBox(height: 14),
+                          Card(
+                            elevation: 0,
                             color: Theme.of(context)
                                 .colorScheme
-                                .surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(20),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () => _openMonthPicker(cashFlowProvider),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      monthLabel,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(fontWeight: FontWeight.w700),
+                                .surfaceContainerLowest,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Previous month',
+                                    icon: const Icon(
+                                      Icons.chevron_left_rounded,
+                                      size: 28,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      yearLabel,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            fontWeight: FontWeight.w600,
+                                    onPressed: _goToPreviousMonth,
+                                  ),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () =>
+                                          _openMonthPicker(cashFlowProvider),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            monthLabel,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                           ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$yearLabel • ${_isHebrew ? 'Hebrew' : 'Gregorian'}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Next month',
+                                    icon: const Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 28,
+                                    ),
+                                    onPressed: _goToNextMonth,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            tooltip: 'Next month',
-                            icon: const Icon(Icons.chevron_right_rounded, size: 28),
-                            onPressed: _goToNextMonth,
-                          ),
+                          const SizedBox(height: 16),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredExpenses.length,
-                    itemBuilder: (context, index) => GestureDetector(
-                      onTap: () => cashFlowProvider.openAddCashFlowOverlay(
-                          context, filteredExpenses[index].transactionType,
-                          cashFlow: filteredExpenses[index]),
-                      child: ExpenseItem(expense: filteredExpenses[index]),
                     ),
                   ),
-                ),
-              ],
+                  if (filteredExpenses.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'No entries were found for this month. Add one with the + button.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: GestureDetector(
+                              onTap: () => cashFlowProvider.openAddCashFlowOverlay(
+                                context,
+                                filteredExpenses[index].transactionType,
+                                cashFlow: filteredExpenses[index],
+                              ),
+                              child: ExpenseItem(expense: filteredExpenses[index]),
+                            ),
+                          ),
+                          childCount: filteredExpenses.length,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         );
