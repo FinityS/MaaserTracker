@@ -30,6 +30,7 @@ class _NewCashFlowState extends State<NewCashFlow> {
   DateTime? _selectedDate;
   JewishDate? _selectedHebrewDate;
   String? _dateValidationMessage;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -92,6 +93,10 @@ class _NewCashFlowState extends State<NewCashFlow> {
   }
 
   Future<void> _saveCashFlow() async {
+    if (_isSubmitting) {
+      return;
+    }
+
     final formIsValid = _formKey.currentState?.validate() ?? false;
     if (!formIsValid) {
       return;
@@ -116,20 +121,57 @@ class _NewCashFlowState extends State<NewCashFlow> {
       transactionType: _selectedTransaction,
     );
 
-    final provider = Provider.of<CashFlowProvider>(context, listen: false);
-    if (widget.cashFlow == null) {
-      await provider.addCashFlow(newCashFlow);
-    } else {
-      await provider.updateCashFlow(newCashFlow);
-    }
+    setState(() {
+      _isSubmitting = true;
+    });
 
-    if (mounted) {
-      Navigator.of(context).pop();
+    try {
+      final provider = Provider.of<CashFlowProvider>(context, listen: false);
+      if (widget.cashFlow == null) {
+        await provider.addCashFlow(newCashFlow);
+      } else {
+        await provider.updateCashFlow(newCashFlow);
+      }
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
   Future<void> _deleteCashFlow() async {
     if (widget.cashFlow == null) {
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete transaction?'),
+        content: const Text(
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) {
       return;
     }
 
@@ -143,6 +185,10 @@ class _NewCashFlowState extends State<NewCashFlow> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.cashFlow != null;
+    final theme = Theme.of(context);
+    final formattedDate = _selectedDate == null
+        ? 'No date chosen'
+        : '${DateFormat.yMMMd().format(_selectedDate!)} · ${(_selectedHebrewDate ?? JewishDate.fromDateTime(_selectedDate!)).toString()}';
 
     return Scaffold(
       appBar: AppBar(
@@ -150,147 +196,185 @@ class _NewCashFlowState extends State<NewCashFlow> {
             ? 'Edit ${_selectedTransaction.toString()}'
             : 'Add ${_selectedTransaction.toString()}'),
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SegmentedButton<TransactionType>(
-                  segments: const <ButtonSegment<TransactionType>>[
-                    ButtonSegment<TransactionType>(
-                      label: Text('Income'),
-                      value: TransactionType.income,
-                      icon: Icon(Icons.attach_money),
-                    ),
-                    ButtonSegment<TransactionType>(
-                      label: Text('Maaser'),
-                      value: TransactionType.maaser,
-                      icon: Icon(Icons.volunteer_activism),
-                    ),
-                    ButtonSegment<TransactionType>(
-                      label: Text('Maaser Deductions'),
-                      value: TransactionType.deductions,
-                      icon: Icon(Icons.money_off),
-                    ),
-                  ],
-                  selected: <TransactionType>{_selectedTransaction},
-                  onSelectionChanged: (Set<TransactionType> newSelection) {
-                    setState(() {
-                      _selectedTransaction = newSelection.first;
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Describe the transaction',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please provide a title.';
-                    }
-                    if (value.trim().length < 3) {
-                      return 'Use at least 3 characters for the title.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _amountController,
-                  focusNode: _amountFocusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                    prefixText: '\$',
-                    hintText: '0.00',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: false,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,\.]')),
-                  ],
-                  validator: (value) {
-                    final parsedAmount = _parseAmount(value ?? '');
-                    if (parsedAmount == null || parsedAmount <= 0) {
-                      return 'Enter an amount greater than zero.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _selectedDate == null
-                                ? 'No date chosen'
-                                : '${DateFormat.yMd().format(_selectedDate!)}  ·  ${_selectedHebrewDate ?? JewishDate.fromDateTime(_selectedDate!).toString()}',
+                            'Transaction Type',
+                            style: theme.textTheme.titleSmall,
                           ),
-                          if (_dateValidationMessage != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                _dateValidationMessage!,
-                                style: const TextStyle(color: Colors.red),
-                              ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<TransactionType>(
+                              segments: const <ButtonSegment<TransactionType>>[
+                                ButtonSegment<TransactionType>(
+                                  label: Text('Income'),
+                                  value: TransactionType.income,
+                                  icon: Icon(Icons.attach_money),
+                                ),
+                                ButtonSegment<TransactionType>(
+                                  label: Text('Maaser'),
+                                  value: TransactionType.maaser,
+                                  icon: Icon(Icons.volunteer_activism),
+                                ),
+                                ButtonSegment<TransactionType>(
+                                  label: Text('Deduction'),
+                                  value: TransactionType.deductions,
+                                  icon: Icon(Icons.money_off),
+                                ),
+                              ],
+                              selected: <TransactionType>{_selectedTransaction},
+                              onSelectionChanged:
+                                  (Set<TransactionType> newSelection) {
+                                setState(() {
+                                  _selectedTransaction = newSelection.first;
+                                });
+                              },
                             ),
+                          ),
                         ],
                       ),
                     ),
-                    TextButton(
-                      onPressed: _presentDatePicker,
-                      child: const Icon(Icons.calendar_today),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _saveCashFlow,
-                        child: Text(isEditing ? 'Save' : 'Add'),
-                      ),
-                    ),
-                  ],
-                ),
-                if (isEditing) ...[
+                  ),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _deleteCashFlow,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _titleController,
+                            decoration: const InputDecoration(
+                              labelText: 'Title',
+                              hintText: 'Describe the transaction',
+                              prefixIcon: Icon(Icons.title),
+                            ),
+                            textCapitalization: TextCapitalization.sentences,
+                            textInputAction: TextInputAction.next,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please provide a title.';
+                              }
+                              if (value.trim().length < 3) {
+                                return 'Use at least 3 characters for the title.';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _amountController,
+                            focusNode: _amountFocusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Amount',
+                              prefixText: '\$',
+                              hintText: '0.00',
+                              prefixIcon: Icon(Icons.payments_outlined),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: false,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9,\.]'),
+                              ),
+                            ],
+                            validator: (value) {
+                              final parsedAmount = _parseAmount(value ?? '');
+                              if (parsedAmount == null || parsedAmount <= 0) {
+                                return 'Enter an amount greater than zero.';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
-                      child: const Text('Delete'),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.calendar_month),
+                      title: Text(formattedDate),
+                      subtitle: _dateValidationMessage == null
+                          ? const Text('Transaction date')
+                          : Text(
+                              _dateValidationMessage!,
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                      trailing: FilledButton.tonalIcon(
+                        onPressed: _presentDatePicker,
+                        icon: const Icon(Icons.edit_calendar),
+                        label: const Text('Change'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed:
+                              _isSubmitting ? null : () => Navigator.of(context).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _isSubmitting ? null : _saveCashFlow,
+                          icon: _isSubmitting
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(isEditing ? Icons.save : Icons.add),
+                          label: Text(isEditing ? 'Save' : 'Add'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isEditing) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isSubmitting ? null : _deleteCashFlow,
+                        icon: const Icon(Icons.delete_outline),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        label: const Text('Delete'),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
